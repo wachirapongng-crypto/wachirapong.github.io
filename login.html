@@ -26,33 +26,36 @@
   </div>
 
   <script>
-    // Google Sheet ของคุณ
+    // Google Sheet login
     const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
-    const sheetName = "LOGIN"; // ชื่อแท็บใหม่ที่แก้แล้ว
+    const sheetName = "LOGIN"; // แท็บ login
     const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}&t=${Date.now()}`;
 
     const loginForm = document.getElementById("loginForm");
     const errorMessage = document.getElementById("error-message");
 
+    // ดึงข้อมูล login จาก Google Sheet
     async function getLoginData() {
       try {
-        const response = await fetch(baseURL);
-        const text = await response.text();
-        // แปลง gviz JSON เป็น object
-        const json = JSON.parse(text.substring(47).slice(0, -2));
-        // ดึงเฉพาะคอลัมน์ ID, Pass, Status
-        return json.table.rows.map(r => ({
-          ID: r.c[2]?.v,
-          Pass: r.c[3]?.v,
-          Status: r.c[4]?.v
+        const res = await fetch(baseURL);
+        const text = await res.text();
+        // แปลง JSON ของ Google Visualization API
+        const json = JSON.parse(text.substring(47).slice(0,-2));
+        const data = json.table.rows.map(r => ({
+          ID: r.c[2]?.v?.toString().trim(),       // ID
+          Pass: r.c[3]?.v?.toString().trim(),     // Pass
+          Status: r.c[4]?.v?.toString().trim()    // Status
         }));
-      } catch (error) {
-        console.error("โหลดข้อมูลจาก Google Sheet ไม่สำเร็จ:", error);
+        console.log("Login Data:", data); // ตรวจสอบใน console
+        return data;
+      } catch (err) {
+        console.error("โหลดข้อมูล login ไม่สำเร็จ:", err);
         return [];
       }
     }
 
-    loginForm.addEventListener("submit", async function (e) {
+    // เช็ค login
+    loginForm.addEventListener("submit", async function(e){
       e.preventDefault();
       const username = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value.trim();
@@ -60,10 +63,12 @@
       const loginData = await getLoginData();
       const user = loginData.find(u => u.ID === username && u.Pass === password);
 
-      if (user) {
-        if (user.Status === "admin") {
+      if(user){
+        // เก็บชื่อผู้ใช้ไว้ใน localStorage (optional)
+        localStorage.setItem("loginUser", JSON.stringify(user));
+        if(user.Status === "admin"){
           window.location.href = "admin.html";
-        } else if (user.Status === "employee") {
+        } else if(user.Status === "employee"){
           window.location.href = "employee.html";
         } else {
           errorMessage.textContent = "สิทธิ์ผู้ใช้งานไม่ถูกต้อง";
