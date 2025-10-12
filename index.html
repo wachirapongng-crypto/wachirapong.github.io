@@ -2,9 +2,36 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>เว็บง่าย ๆ ของฉัน</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบครุภัณฑ์ | หน้าแรก</title>
+  <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-<p>test</p>
+  <header>
+    <h1>ระบบจัดการครุภัณฑ์</h1>
+    <nav>
+      <a href="index.html">หน้าแรก</a>
+      <a href="login.html">เข้าสู่ระบบ</a>
+    </nav>
+  </header>
+
+  <main>
+    <h2>รายการอุปกรณ์ล่าสุด</h2>
+    <table id="equipment-table">
+      <thead>
+        <tr>
+          <th>ลำดับ</th>
+          <th>รหัส</th>
+          <th>ชื่อ</th>
+          <th>ที่เก็บ</th>
+          <th>สถานะ</th>
+          <th>เพิ่มเติม</th>
+        </tr>
+      </thead>
+      <tbody id="equipment-body"></tbody>
+    </table>
+  </main>
+
+  <script src="assets/script.js"></script>
 </body>
 </html>
