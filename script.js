@@ -1,5 +1,7 @@
+const sheetName = "ครุภัณฑ์ปี2568";
 const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
-const baseURL = `https://docs.google.com/spreadsheets/d/1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0/edit?usp=sharing`;
+const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?sheet=${sheetName}&tqx=out:json&t=${Date.now()}`;
+
 
 fetch(baseURL)
   .then(res => res.text())
