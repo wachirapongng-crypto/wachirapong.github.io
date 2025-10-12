@@ -1,0 +1,79 @@
+/* รีเซ็ตค่าเริ่มต้น */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Prompt", sans-serif;
+}
+
+/* จัดกึ่งกลางหน้าจอ */
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #4b6cb7, #182848);
+}
+
+/* กล่องฟอร์ม */
+.login-container {
+  background-color: #fff;
+  padding: 2rem 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  width: 320px;
+  text-align: center;
+}
+
+h2 {
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+/* ช่องกรอกข้อมูล */
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0 16px 0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+/* ปุ่ม */
+button {
+  width: 100%;
+  padding: 10px;
+  background-color: #4b6cb7;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  background-color: #3a5296;
+}
+
+/* ข้อความ error */
+.error {
+  color: red;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+/* ลิงก์กลับหน้าแรก */
+.back-home {
+  margin-top: 1.2rem;
+}
+
+.back-home a {
+  color: #4b6cb7;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.back-home a:hover {
+  text-decoration: underline;
+}
