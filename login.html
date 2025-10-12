@@ -26,19 +26,48 @@
   </div>
 
   <script>
+    // Google Sheet ของคุณ
+    const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
+    const sheetName = "login"; // ชื่อแท็บใหม่ที่แก้แล้ว
+    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}&t=${Date.now()}`;
+
     const loginForm = document.getElementById("loginForm");
     const errorMessage = document.getElementById("error-message");
 
-    loginForm.addEventListener("submit", function (e) {
+    async function getLoginData() {
+      try {
+        const response = await fetch(baseURL);
+        const text = await response.text();
+        // แปลง gviz JSON เป็น object
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        // ดึงเฉพาะคอลัมน์ ID, Pass, Status
+        return json.table.rows.map(r => ({
+          ID: r.c[1]?.v,
+          Pass: r.c[2]?.v,
+          Status: r.c[3]?.v
+        }));
+      } catch (error) {
+        console.error("โหลดข้อมูลจาก Google Sheet ไม่สำเร็จ:", error);
+        return [];
+      }
+    }
+
+    loginForm.addEventListener("submit", async function (e) {
       e.preventDefault();
       const username = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value.trim();
 
-      // ตัวอย่างระบบ Login แบบจำลอง
-      if (username === "admin" && password === "1234") {
-        window.location.href = "admin.html";
-      } else if (username === "employee" && password === "1234") {
-        window.location.href = "employee.html";
+      const loginData = await getLoginData();
+      const user = loginData.find(u => u.ID === username && u.Pass === password);
+
+      if (user) {
+        if (user.Status === "admin") {
+          window.location.href = "admin.html";
+        } else if (user.Status === "employee") {
+          window.location.href = "employee.html";
+        } else {
+          errorMessage.textContent = "สิทธิ์ผู้ใช้งานไม่ถูกต้อง";
+        }
       } else {
         errorMessage.textContent = "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
       }
