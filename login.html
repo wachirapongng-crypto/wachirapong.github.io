@@ -42,9 +42,9 @@
         const json = JSON.parse(text.substring(47).slice(0, -2));
         // ดึงเฉพาะคอลัมน์ ID, Pass, Status
         return json.table.rows.map(r => ({
-          ID: r.c[1]?.v,
-          Pass: r.c[2]?.v,
-          Status: r.c[3]?.v
+          ID: r.c[2]?.v,
+          Pass: r.c[3]?.v,
+          Status: r.c[4]?.v
         }));
       } catch (error) {
         console.error("โหลดข้อมูลจาก Google Sheet ไม่สำเร็จ:", error);
