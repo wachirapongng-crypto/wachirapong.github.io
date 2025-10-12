@@ -7,8 +7,12 @@
   <link rel="stylesheet" href="index.css">
 </head>
 <body>
-  <div class="container">
+  <header>
     <h2>รายการครุภัณฑ์ล่าสุด</h2>
+    <a href="login.html" class="loginBtn">Login</a>
+  </header>
+
+  <div class="container">
     <table id="equipmentTable">
       <thead>
         <tr>
@@ -26,10 +30,10 @@
     </table>
   </div>
 
+  <!-- Modal -->
   <div id="modal" class="modal">
     <div class="modal-content">
       <span id="closeModal" class="close">&times;</span>
-      <h3>รายละเอียดครุภัณฑ์</h3>
       <div id="modalDetails"></div>
     </div>
   </div>
@@ -49,7 +53,7 @@
         const res = await fetch(baseURL);
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
-        const data = json.table.rows.map(r => ({
+        let data = json.table.rows.map(r => ({
           number: r.c[0]?.v,
           code: r.c[1]?.v,
           name: r.c[2]?.v,
@@ -57,6 +61,9 @@
           status: r.c[4]?.v,
           details: r.c[5]?.v
         }));
+
+        // เรียงลำดับจากล่าสุดไปเก่าสุด
+        data.sort((a, b) => b.number - a.number);
 
         tableBody.innerHTML = data.map(e => `
           <tr>
@@ -72,12 +79,8 @@
         document.querySelectorAll(".detailBtn").forEach((btn, i) => {
           btn.addEventListener("click", () => {
             modalDetails.innerHTML = `
-              <p><strong>ลำดับ:</strong> ${data[i].number}</p>
-              <p><strong>รหัส:</strong> ${data[i].code}</p>
-              <p><strong>ชื่อ:</strong> ${data[i].name}</p>
-              <p><strong>ที่เก็บ:</strong> ${data[i].location}</p>
-              <p><strong>สถานะ:</strong> ${data[i].status}</p>
-              <p><strong>รายละเอียด:</strong> ${data[i].details}</p>
+              <p><strong>${data[i].name} / ${data[i].code}</strong></p>
+              <p>ที่เก็บ: ${data[i].location} | สถานะ: ${data[i].status}</p>
             `;
             modal.style.display = "block";
           });
