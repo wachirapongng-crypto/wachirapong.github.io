@@ -3,21 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบครุภัณฑ์ | หน้าแรก</title>
-  <link rel="stylesheet" href="style.css">
+  <title>รายการครุภัณฑ์ล่าสุด</title>
+  <link rel="stylesheet" href="index.css">
 </head>
 <body>
-  <header>
-    <h1>ระบบจัดการครุภัณฑ์</h1>
-    <nav>
-      <a href="index.html">หน้าแรก</a>
-      <a href="login.html">เข้าสู่ระบบ</a>
-    </nav>
-  </header>
-
-  <main>
-    <h2>รายการอุปกรณ์ล่าสุด</h2>
-    <table id="equipment-table">
+  <div class="container">
+    <h2>รายการครุภัณฑ์ล่าสุด</h2>
+    <table id="equipmentTable">
       <thead>
         <tr>
           <th>ลำดับ</th>
@@ -25,13 +17,81 @@
           <th>ชื่อ</th>
           <th>ที่เก็บ</th>
           <th>สถานะ</th>
-          <th>เพิ่มเติม</th>
+          <th>รายละเอียด</th>
         </tr>
       </thead>
-      <tbody id="equipment-body"></tbody>
+      <tbody>
+        <!-- ข้อมูลจะถูกโหลดจาก Google Sheet -->
+      </tbody>
     </table>
-  </main>
+  </div>
 
-  <script src="script.js"></script>
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <span id="closeModal" class="close">&times;</span>
+      <h3>รายละเอียดครุภัณฑ์</h3>
+      <div id="modalDetails"></div>
+    </div>
+  </div>
+
+  <script>
+    const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
+    const sheetName = "LOG"; // แท็บครุภัณฑ์
+    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}&t=${Date.now()}`;
+
+    const tableBody = document.querySelector("#equipmentTable tbody");
+    const modal = document.getElementById("modal");
+    const closeModal = document.getElementById("closeModal");
+    const modalDetails = document.getElementById("modalDetails");
+
+    async function loadEquipment() {
+      try {
+        const res = await fetch(baseURL);
+        const text = await res.text();
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        const data = json.table.rows.map(r => ({
+          number: r.c[0]?.v,
+          code: r.c[1]?.v,
+          name: r.c[2]?.v,
+          location: r.c[3]?.v,
+          status: r.c[4]?.v,
+          details: r.c[5]?.v
+        }));
+
+        tableBody.innerHTML = data.map(e => `
+          <tr>
+            <td>${e.number}</td>
+            <td>${e.code}</td>
+            <td>${e.name}</td>
+            <td>${e.location}</td>
+            <td>${e.status}</td>
+            <td><button class="detailBtn">ดูรายละเอียด</button></td>
+          </tr>
+        `).join("");
+
+        document.querySelectorAll(".detailBtn").forEach((btn, i) => {
+          btn.addEventListener("click", () => {
+            modalDetails.innerHTML = `
+              <p><strong>ลำดับ:</strong> ${data[i].number}</p>
+              <p><strong>รหัส:</strong> ${data[i].code}</p>
+              <p><strong>ชื่อ:</strong> ${data[i].name}</p>
+              <p><strong>ที่เก็บ:</strong> ${data[i].location}</p>
+              <p><strong>สถานะ:</strong> ${data[i].status}</p>
+              <p><strong>รายละเอียด:</strong> ${data[i].details}</p>
+            `;
+            modal.style.display = "block";
+          });
+        });
+
+      } catch (error) {
+        console.error("โหลดข้อมูลไม่สำเร็จ:", error);
+      }
+    }
+
+    closeModal.onclick = () => modal.style.display = "none";
+    window.onclick = e => { if(e.target == modal) modal.style.display = "none"; }
+
+    loadEquipment();
+  </script>
 </body>
 </html>
