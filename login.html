@@ -43,9 +43,9 @@
         // แปลง JSON ของ Google Visualization API
         const json = JSON.parse(text.substring(47).slice(0,-2));
         const data = json.table.rows.map(r => ({
-          ID: r.c[1]?.v?.toString().trim(),       // ตรวจสอบคอลัมน์ ID
-          Pass: r.c[2]?.v?.toString().trim(),     // ตรวจสอบคอลัมน์ Pass
-          Status: r.c[3]?.v?.toString().trim().toLowerCase() // ตรวจสอบคอลัมน์ Status
+          ID: r.c[0]?.v?.toString().trim(),       // ตรวจสอบคอลัมน์ ID
+          Pass: r.c[1]?.v?.toString().trim(),     // ตรวจสอบคอลัมน์ Pass
+          Status: r.c[2]?.v?.toString().trim().toLowerCase() // ตรวจสอบคอลัมน์ Status
         }));
 
         console.log("Login Data จาก Google Sheet:", data);
