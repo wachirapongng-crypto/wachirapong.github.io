@@ -26,7 +26,6 @@
   </div>
 
   <script>
-    // --- ตั้งค่า Google Sheet ---
     const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
     const sheetName = "LOGIN";
     const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}&t=${Date.now()}`;
@@ -34,13 +33,11 @@
     const loginForm = document.getElementById("loginForm");
     const errorMessage = document.getElementById("error-message");
 
-    // --- ดึงข้อมูล login ---
+
     async function getLoginData() {
       try {
         const res = await fetch(baseURL);
         const text = await res.text();
-
-        // แปลง JSON ของ Google Visualization API
         const json = JSON.parse(text.substring(47).slice(0,-2));
         const data = json.table.rows.map(r => ({
           ID: r.c[1]?.v?.toString().trim(),       // ตรวจสอบคอลัมน์ ID
@@ -57,7 +54,6 @@
       }
     }
 
-    // --- ตรวจสอบ login ---
     loginForm.addEventListener("submit", async function(e){
       e.preventDefault();
       errorMessage.textContent = ""; // เคลียร์ข้อความเดิม
