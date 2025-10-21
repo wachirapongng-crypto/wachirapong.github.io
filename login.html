@@ -40,16 +40,18 @@
         const res = await fetch(baseURL);
         const text = await res.text();
 
-        // แปลง JSON ของ Google Visualization API
         const json = JSON.parse(text.substring(47).slice(0,-2));
+
+        // แปลงข้อมูล
         const data = json.table.rows.map(r => ({
-          ID: r.c[0]?.v?.toString().trim(),       // ตรวจสอบคอลัมน์ ID
-          Pass: r.c[1]?.v?.toString().trim(),     // ตรวจสอบคอลัมน์ Pass
-          Status: r.c[2]?.v?.toString().trim().toLowerCase() // ตรวจสอบคอลัมน์ Status
+          ID: r.c[0]?.v?.toString().trim(),           // A = ID
+          Pass: r.c[1]?.v?.toString().trim(),         // B = Pass
+          Status: r.c[2]?.v?.toString().trim().toLowerCase() // C = Status
         }));
 
         console.log("Login Data จาก Google Sheet:", data);
         return data;
+
       } catch (err) {
         console.error("โหลดข้อมูล login ไม่สำเร็จ:", err);
         errorMessage.textContent = "ไม่สามารถโหลดข้อมูลผู้ใช้ได้ กรุณาลองใหม่";
@@ -60,23 +62,28 @@
     // --- ตรวจสอบ login ---
     loginForm.addEventListener("submit", async function(e){
       e.preventDefault();
-      errorMessage.textContent = ""; // เคลียร์ข้อความเดิม
+      errorMessage.textContent = "";
 
-      const username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value.trim();
+      const usernameInput = document.getElementById("username").value.trim().toLowerCase();
+      const passwordInput = document.getElementById("password").value.trim().toLowerCase();
 
       const loginData = await getLoginData();
-      if(loginData.length === 0) return; // ถ้าโหลดไม่ได้
+      if(loginData.length === 0) return;
+
+      // debug: แสดงทุก user
+      loginData.forEach(u => console.log(u.ID, u.Pass, u.Status));
 
       // หา user
-      const user = loginData.find(u => u.ID === username && u.Pass === password);
+      const user = loginData.find(u => 
+        u.ID?.toLowerCase() === usernameInput &&
+        u.Pass?.toLowerCase() === passwordInput
+      );
+
       console.log("ตรวจสอบผู้ใช้:", user);
 
       if(user){
-        // เก็บข้อมูล user
         localStorage.setItem("loginUser", JSON.stringify(user));
 
-        // แบ่งหน้าโดย Status
         if(user.Status === "admin"){
           window.location.href = "admin.html";
         } else if(user.Status === "employee"){
