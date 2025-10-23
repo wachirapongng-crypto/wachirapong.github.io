@@ -2,97 +2,65 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>ระบบตรวจสอบครุภัณฑ์</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ</title>
   <link rel="stylesheet" href="index.css">
 </head>
 <body>
-  <header>
-    <div class="logo">logo</div>
-    <h1>ระบบตรวจสอบครุภัณฑ์</h1>
-    <button class="login-btn">LOGIN</button>
-  </header>
-
-  <main>
-    <section class="table-section">
-      <div class="table-header">
-        <h2>ชื่อ ครุภัณฑ์</h2>
-        <div class="search-box">
-          <input type="text" id="search" placeholder="🔍 ค้นหาครุภัณฑ์...">
-        </div>
+  <div class="login-container">
+    <h2>เข้าสู่ระบบ</h2>
+    <form id="loginForm">
+      <div class="input-group">
+        <label for="id">รหัสผู้ใช้ (ID)</label>
+        <input type="text" id="id" name="id" required>
       </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>วันที่</th>
-            <th>ชื่อครุภัณฑ์</th>
-            <th>Status</th>
-            <th>หมายเหตุ</th>
-          </tr>
-        </thead>
-        <tbody id="data-table"></tbody>
-      </table>
-    </section>
-  </main>
+      <div class="input-group">
+        <label for="pass">รหัสผ่าน (Password)</label>
+        <input type="password" id="pass" name="pass" required>
+      </div>
+      <button type="submit" class="btn">เข้าสู่ระบบ</button>
+    </form>
+    <p id="status"></p>
+  </div>
 
   <script>
-    const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
-    const sheetName = "SHOW";
-    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}&t=${Date.now()}`;
+    document.getElementById("loginForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
 
-    const tableBody = document.querySelector("#equipmentTable tbody");
-    const searchInput = document.getElementById("searchInput");
-    const modal = document.getElementById("modal");
-    const closeModal = document.getElementById("closeModal");
-    const modalDetails = document.getElementById("modalDetails");
-    const sortBtn = document.getElementById("sortBtn");
+      const id = document.getElementById("id").value.trim();
+      const pass = document.getElementById("pass").value.trim();
+      const status = document.getElementById("status");
 
-    let data = [];
-    let ascending = true; // เริ่มต้นเรียงจากน้อยไปมาก
+      status.textContent = "กำลังตรวจสอบข้อมูล...";
 
-    async function loadEquipment() {
       try {
-        const res = await fetch(baseURL);
-        const text = await res.text();
-        const json = JSON.parse(text.substring(47).slice(0, -2));
-        data = json.table.rows.map(r => ({
-          number: r.c[0]?.v,
-          code: r.c[1]?.v,
-          name: r.c[2]?.v,
-          location: r.c[3]?.v,
-          status: r.c[4]?.v,
-          details: r.c[5]?.v
-        }));
+        const response = await fetch("https://script.google.com/macros/s/AKfycbz0-MZmsHHyQFQj7gRZBEXAMPLE/exec");
+        const data = await response.json();
 
-        renderTable();
+        console.log("Login Data จาก Google Sheet:", data);
+
+        // 🔹 ใช้โครงสร้างตามเดิมที่เคยใช้งานได้
+        const foundUser = data.find(r =>
+          r.c[0]?.v?.toString().trim() === id &&
+          r.c[1]?.v?.toString().trim() === pass
+        );
+
+        if (foundUser) {
+          status.textContent = "✅ เข้าสู่ระบบสำเร็จ";
+          status.style.color = "#00cc66";
+
+          setTimeout(() => {
+            window.location.href = "index.html";
+          }, 1000);
+        } else {
+          status.textContent = "❌ รหัสผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
+          status.style.color = "red";
+        }
       } catch (error) {
-        console.error("โหลดข้อมูลไม่สำเร็จ:", error);
+        console.error("เกิดข้อผิดพลาด:", error);
+        status.textContent = "⚠️ ไม่สามารถเชื่อมต่อข้อมูลได้";
+        status.style.color = "orange";
       }
-    }
-
-    // ฟังก์ชันแสดงข้อมูล
-    function renderTable(rows) {
-      const tbody = document.getElementById("data-table");
-      tbody.innerHTML = "";
-      rows.forEach(row => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${row[0]}</td>
-          <td><a href="detail.html?id=${row[1]}">${row[2]}</a></td>
-          <td>${row[3]}</td>
-          <td>${row[4] || "-"}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    // ฟังก์ชันค้นหา
-    document.getElementById("search").addEventListener("keyup", (e) => {
-      const keyword = e.target.value.toLowerCase();
-      const filtered = allRows.filter(row => 
-        row.some(cell => cell && cell.toString().toLowerCase().includes(keyword))
-      );
-      renderTable(filtered);
     });
   </script>
 </body>
