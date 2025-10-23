@@ -1,1 +1,89 @@
+body {
+      font-family: "Sarabun", sans-serif;
+      margin: 0;
+      background-color: #dbeeff;
+    }
 
+    header {
+      background-color: #0a66c2;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 40px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.8em;
+    }
+
+    header nav a {
+      color: #0a66c2;
+      background-color: #fff;
+      padding: 10px 20px;
+      border-radius: 25px;
+      font-weight: bold;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+
+    header nav a:hover {
+      background-color: #f1f1f1;
+    }
+
+    main {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+    }
+
+    .detail-box {
+      background-color: #0a66c2;
+      color: black;
+      width: 80%;
+      max-width: 900px;
+      border-radius: 25px;
+      padding: 30px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .detail-box h2 {
+      color: white;
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1.6em;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #dbeeff;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      border: 1px solid #a7c8e7;
+      text-align: center;
+      padding: 12px;
+    }
+
+    th {
+      background-color: #0a66c2;
+      color: white;
+    }
+
+    tr:nth-child(even) {
+      background-color: #e9f4ff;
+    }
+
+    .notfound {
+      text-align: center;
+      font-size: 1.2em;
+      color: red;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+    }
