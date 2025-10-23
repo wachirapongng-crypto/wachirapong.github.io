@@ -38,18 +38,37 @@
   <script>
     const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
     const sheetName = "SHOW";
-    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
+    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}&t=${Date.now()}`;
 
-    let allRows = [];
+    const tableBody = document.querySelector("#equipmentTable tbody");
+    const searchInput = document.getElementById("searchInput");
+    const modal = document.getElementById("modal");
+    const closeModal = document.getElementById("closeModal");
+    const modalDetails = document.getElementById("modalDetails");
+    const sortBtn = document.getElementById("sortBtn");
 
-    fetch(baseURL)
-      .then(res => res.text())
-      .then(text => {
-        const json = JSON.parse(text.substr(47).slice(0, -2));
-        const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : "")));
-        allRows = rows.slice(1);
-        renderTable(allRows);
-      });
+    let data = [];
+    let ascending = true; // เริ่มต้นเรียงจากน้อยไปมาก
+
+    async function loadEquipment() {
+      try {
+        const res = await fetch(baseURL);
+        const text = await res.text();
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        data = json.table.rows.map(r => ({
+          number: r.c[0]?.v,
+          code: r.c[1]?.v,
+          name: r.c[2]?.v,
+          location: r.c[3]?.v,
+          status: r.c[4]?.v,
+          details: r.c[5]?.v
+        }));
+
+        renderTable();
+      } catch (error) {
+        console.error("โหลดข้อมูลไม่สำเร็จ:", error);
+      }
+    }
 
     // ฟังก์ชันแสดงข้อมูล
     function renderTable(rows) {
