@@ -2,7 +2,6 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ระบบตรวจสอบครุภัณฑ์</title>
   <link rel="stylesheet" href="index.css">
 </head>
@@ -10,69 +9,71 @@
   <header>
     <div class="logo">logo</div>
     <h1>ระบบตรวจสอบครุภัณฑ์</h1>
-    <div class="right">
-      <button class="login-btn">LOGIN</button>
-    </div>
+    <button class="login-btn">LOGIN</button>
   </header>
 
   <main>
-    <div class="search-area">
-      <input type="text" id="searchInput" placeholder="ค้นหา...">
-      <button id="searchBtn">ค้นหา</button>
-    </div>
+    <section class="table-section">
+      <div class="table-header">
+        <h2>ชื่อ ครุภัณฑ์</h2>
+        <div class="search-box">
+          <input type="text" id="search" placeholder="🔍 ค้นหาครุภัณฑ์...">
+        </div>
+      </div>
 
-    <div class="table-container">
-      <table id="equipmentTable">
+      <table>
         <thead>
           <tr>
-            <th>รหัสครุภัณฑ์</th>
-            <th>ชื่อ</th>
-            <th>ที่อยู่</th>
+            <th>วันที่</th>
+            <th>ชื่อครุภัณฑ์</th>
             <th>Status</th>
-            <th>รายละเอียด</th>
+            <th>หมายเหตุ</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody id="data-table"></tbody>
       </table>
-    </div>
+    </section>
   </main>
 
   <script>
-    const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0"; // ใส่ Google Sheet ID
-    const sheetName = "SHOW";
-    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
+    const sheetID = "ใส่ SHEET_ID_ของคุณ";
+    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
 
-    const tableBody = document.querySelector("#equipmentTable tbody");
+    let allRows = [];
 
-    async function loadEquipment() {
-      try {
-        const res = await fetch(baseURL);
-        const text = await res.text();
-        const json = JSON.parse(text.substring(47).slice(0, -2));
-        let data = json.table.rows.map(r => ({
-          code: r.c[1]?.v,
-          name: r.c[2]?.v,
-          location: r.c[3]?.v,
-          status: r.c[4]?.v,
-          details: r.c[5]?.v
-        }));
+    fetch(baseURL)
+      .then(res => res.text())
+      .then(text => {
+        const json = JSON.parse(text.substr(47).slice(0, -2));
+        const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : "")));
+        allRows = rows.slice(1);
+        renderTable(allRows);
+      });
 
-        tableBody.innerHTML = data.map(e => `
-          <tr>
-            <td>${e.code}</td>
-            <td>${e.name}</td>
-            <td>${e.location}</td>
-            <td>${e.status}</td>
-            <td><a href="detail.html?id=${e.code}" class="detail-btn">ดูเพิ่มเติม</a></td>
-          </tr>
-        `).join("");
-      } catch (err) {
-        console.error("โหลดข้อมูลไม่สำเร็จ:", err);
-        tableBody.innerHTML = "<tr><td colspan='5'>เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>";
-      }
+    // ฟังก์ชันแสดงข้อมูล
+    function renderTable(rows) {
+      const tbody = document.getElementById("data-table");
+      tbody.innerHTML = "";
+      rows.forEach(row => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${row[0]}</td>
+          <td><a href="detail.html?id=${row[1]}">${row[2]}</a></td>
+          <td>${row[3]}</td>
+          <td>${row[4] || "-"}</td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
-    loadEquipment();
+    // ฟังก์ชันค้นหา
+    document.getElementById("search").addEventListener("keyup", (e) => {
+      const keyword = e.target.value.toLowerCase();
+      const filtered = allRows.filter(row => 
+        row.some(cell => cell && cell.toString().toLowerCase().includes(keyword))
+      );
+      renderTable(filtered);
+    });
   </script>
 </body>
 </html>
