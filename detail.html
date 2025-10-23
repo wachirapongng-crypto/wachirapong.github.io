@@ -2,21 +2,30 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>รายละเอียดอุปกรณ์</title>
-  <link rel="stylesheet" href="index.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายละเอียดครุภัณฑ์</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <h1>รายละเอียดครุภัณฑ์</h1>
-    <nav><a href="index.html">กลับหน้าแรก</a></nav>
+    <div class="logo">logo</div>
+    <h1>ระบบตรวจสอบครุภัณฑ์</h1>
+    <div class="right">
+      <a href="index.html" class="login-btn">กลับหน้าแรก</a>
+    </div>
   </header>
 
-  <main id="detail"></main>
+  <main>
+    <div class="detail-box" id="detail">
+      <h2>กำลังโหลดข้อมูล...</h2>
+    </div>
+  </main>
 
   <script>
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
-    const sheetID = "ใส่ SHEET_ID ของคุณ";
+
+    const sheetID = "ใส่ SHEET_ID ของคุณ"; // ใส่ Google Sheet ID
     const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
 
     fetch(baseURL)
@@ -24,19 +33,41 @@
       .then(text => {
         const json = JSON.parse(text.substr(47).slice(0, -2));
         const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : "")));
-
         const item = rows.find(r => r[1] === id);
+
         if (item) {
           document.getElementById("detail").innerHTML = `
             <h2>${item[2]}</h2>
-            <p><b>รหัส:</b> ${item[1]}</p>
-            <p><b>ที่เก็บ:</b> ${item[3]}</p>
-            <p><b>สถานะ:</b> ${item[4]}</p>
-            <p><b>รายละเอียด:</b> ${item[5] || "-"}</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>วันที่</th>
+                  <th>ที่อยู่</th>
+                  <th>Status</th>
+                  <th>หมายเหตุ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>${item[0] || "-"}</td>
+                  <td>${item[3] || "-"}</td>
+                  <td>${item[4] || "-"}</td>
+                  <td>${item[5] || "-"}</td>
+                </tr>
+              </tbody>
+            </table>
           `;
         } else {
-          document.getElementById("detail").innerHTML = "<p>ไม่พบข้อมูลอุปกรณ์</p>";
+          document.getElementById("detail").innerHTML = `
+            <div class="notfound">ไม่พบข้อมูลอุปกรณ์ที่คุณเลือก</div>
+          `;
         }
+      })
+      .catch(err => {
+        document.getElementById("detail").innerHTML = `
+          <div class="notfound">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>
+        `;
+        console.error(err);
       });
   </script>
 </body>
