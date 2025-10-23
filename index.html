@@ -1,34 +1,44 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>รายการครุภัณฑ์ล่าสุด</title>
-  <link rel="stylesheet" href="index.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระบบตรวจสอบครุภัณฑ์</title>
+  <link rel="stylesheet" href="index.css" />
 </head>
 <body>
   <header>
-    <h2>รายการครุภัณฑ์ล่าสุด</h2>
-    <a href="login.html" class="loginBtn">Login</a>
+    <div class="logo">logo</div>
+    <h1>ระบบตรวจสอบครุภัณฑ์</h1>
+    <div class="header-actions">
+      <input type="text" id="searchInput" placeholder="ค้นหา..." class="search-input" />
+      <a href="login.html" class="login-btn">LOGIN</a>
+    </div>
   </header>
 
-  <div class="container">
-    <table id="equipmentTable">
-      <thead>
-        <tr>
-          <th>ลำดับ</th>
-          <th>รหัส</th>
-          <th>ชื่อ</th>
-          <th>ที่เก็บ</th>
-          <th>สถานะ</th>
-          <th>รายละเอียด</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- ข้อมูลจะถูกโหลดจาก Google Sheet -->
-      </tbody>
-    </table>
-  </div>
+  <main>
+    <section class="table-section">
+      <div class="table-header">
+        <h2>Task Tracker</h2>
+        <button id="sortBtn" class="sort-btn">↑↓ สลับการเรียง</button>
+      </div>
+
+      <table id="equipmentTable">
+        <thead>
+          <tr>
+            <th>รหัสครุภัณฑ์</th>
+            <th>ชื่อ</th>
+            <th>ที่อยู่</th>
+            <th>Status</th>
+            <th>ดูรายละเอียด</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- ข้อมูลจะโหลดจาก Google Sheet -->
+        </tbody>
+      </table>
+    </section>
+  </main>
 
   <!-- Modal -->
   <div id="modal" class="modal">
@@ -40,20 +50,25 @@
 
   <script>
     const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
-    const sheetName = "SHOW"; // แท็บครุภัณฑ์
+    const sheetName = "SHOW";
     const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}&t=${Date.now()}`;
 
     const tableBody = document.querySelector("#equipmentTable tbody");
+    const searchInput = document.getElementById("searchInput");
     const modal = document.getElementById("modal");
     const closeModal = document.getElementById("closeModal");
     const modalDetails = document.getElementById("modalDetails");
+    const sortBtn = document.getElementById("sortBtn");
+
+    let data = [];
+    let ascending = true; // เริ่มต้นเรียงจากน้อยไปมาก
 
     async function loadEquipment() {
       try {
         const res = await fetch(baseURL);
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
-        let data = json.table.rows.map(r => ({
+        data = json.table.rows.map(r => ({
           number: r.c[0]?.v,
           code: r.c[1]?.v,
           name: r.c[2]?.v,
@@ -62,37 +77,61 @@
           details: r.c[5]?.v
         }));
 
-        // เรียงลำดับจากล่าสุดไปเก่าสุด
-        data.sort((a, b) => b.number - a.number);
-
-        tableBody.innerHTML = data.map(e => `
-          <tr>
-            <td>${e.number}</td>
-            <td>${e.code}</td>
-            <td>${e.name}</td>
-            <td>${e.location}</td>
-            <td>${e.status}</td>
-            <td><button class="detailBtn">ดูรายละเอียด</button></td>
-          </tr>
-        `).join("");
-
-        document.querySelectorAll(".detailBtn").forEach((btn, i) => {
-          btn.addEventListener("click", () => {
-            modalDetails.innerHTML = `
-              <p><strong>${data[i].name} / ${data[i].code}</strong></p>
-              <p>ที่เก็บ: ${data[i].location} | สถานะ: ${data[i].status}</p>
-            `;
-            modal.style.display = "block";
-          });
-        });
-
+        renderTable();
       } catch (error) {
         console.error("โหลดข้อมูลไม่สำเร็จ:", error);
       }
     }
 
+    function renderTable(filteredData = data) {
+      // เรียงข้อมูลตามลำดับ
+      filteredData.sort((a, b) => ascending ? a.number - b.number : b.number - a.number);
+
+      tableBody.innerHTML = filteredData.map(e => `
+        <tr>
+          <td>${e.code}</td>
+          <td>${e.name}</td>
+          <td>${e.location}</td>
+          <td>${e.status}</td>
+          <td><button class="detail-btn">ดูเพิ่มเติม</button></td>
+        </tr>
+      `).join("");
+
+      document.querySelectorAll(".detail-btn").forEach((btn, i) => {
+        btn.addEventListener("click", () => {
+          modalDetails.innerHTML = `
+            <h3>${filteredData[i].name}</h3>
+            <p><strong>รหัส:</strong> ${filteredData[i].code}</p>
+            <p><strong>ที่อยู่:</strong> ${filteredData[i].location}</p>
+            <p><strong>สถานะ:</strong> ${filteredData[i].status}</p>
+            <p>${filteredData[i].details || ""}</p>
+          `;
+          modal.style.display = "block";
+        });
+      });
+    }
+
+    // ปิด Modal
     closeModal.onclick = () => modal.style.display = "none";
-    window.onclick = e => { if(e.target == modal) modal.style.display = "none"; }
+    window.onclick = e => { if (e.target == modal) modal.style.display = "none"; };
+
+    // 🔹 ปุ่มสลับการเรียง ↑↓
+    sortBtn.addEventListener("click", () => {
+      ascending = !ascending;
+      renderTable();
+    });
+
+    // 🔹 ค้นหา
+    searchInput.addEventListener("input", e => {
+      const keyword = e.target.value.toLowerCase();
+      const filtered = data.filter(item =>
+        item.code?.toLowerCase().includes(keyword) ||
+        item.name?.toLowerCase().includes(keyword) ||
+        item.location?.toLowerCase().includes(keyword) ||
+        item.status?.toLowerCase().includes(keyword)
+      );
+      renderTable(filtered);
+    });
 
     loadEquipment();
   </script>
