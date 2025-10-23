@@ -23,33 +23,39 @@
 
   <script>
     const params = new URLSearchParams(window.location.search);
-    const id = params.get("id");
+    const id = params.get("id"); // รับรหัสจากหน้า index เช่น ?id=001
 
-    const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0"; // ใส่ Google Sheet ID
-    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
+    const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
+    const sheetName = "LOG";
+    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
 
-    fetch(baseURL)
-      .then(res => res.text())
-      .then(text => {
+    async function loadDetail() {
+      try {
+        const res = await fetch(baseURL);
+        const text = await res.text();
         const json = JSON.parse(text.substr(47).slice(0, -2));
         const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : "")));
-        const item = rows.find(r => r[1] === id);
+
+        // สมมติคอลัมน์ในชีต: [วันที่, รหัส, ชื่อ, ที่เก็บ, สถานะ, หมายเหตุ]
+        const item = rows.find(r => r[1] == id);
 
         if (item) {
           document.getElementById("detail").innerHTML = `
-            <h2>${item[2]}</h2>
+            <h2>${item[2] || "ไม่ระบุชื่อครุภัณฑ์"}</h2>
             <table>
               <thead>
                 <tr>
                   <th>วันที่</th>
-                  <th>ที่อยู่</th>
-                  <th>Status</th>
+                  <th>รหัส</th>
+                  <th>ที่เก็บ</th>
+                  <th>สถานะ</th>
                   <th>หมายเหตุ</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td>${item[0] || "-"}</td>
+                  <td>${item[1] || "-"}</td>
                   <td>${item[3] || "-"}</td>
                   <td>${item[4] || "-"}</td>
                   <td>${item[5] || "-"}</td>
@@ -59,16 +65,18 @@
           `;
         } else {
           document.getElementById("detail").innerHTML = `
-            <div class="notfound">ไม่พบข้อมูลอุปกรณ์ที่คุณเลือก</div>
+            <div class="notfound">ไม่พบข้อมูลครุภัณฑ์รหัส: <b>${id}</b></div>
           `;
         }
-      })
-      .catch(err => {
+      } catch (error) {
+        console.error(error);
         document.getElementById("detail").innerHTML = `
           <div class="notfound">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>
         `;
-        console.error(err);
-      });
+      }
+    }
+
+    loadDetail();
   </script>
 </body>
 </html>
