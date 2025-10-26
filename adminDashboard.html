@@ -36,7 +36,6 @@
     </div>
   </section>
 
-  <script src="scripts/sheet.js"></script>
   <script>
     // โหลดชื่อผู้ใช้จาก localStorage
     document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
@@ -106,6 +105,18 @@
     function logout() {
       localStorage.removeItem("username");
       window.location.href = "login.html";
+    }
+
+    // ตัวอย่างจำลองการบันทึก (สามารถเชื่อม Google Sheet ได้ภายหลัง)
+    function saveData() {
+      const code = document.getElementById("code").value.trim();
+      const name = document.getElementById("name").value.trim();
+      if (!code || !name) {
+        alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+        return;
+      }
+      alert(`บันทึกข้อมูลสำเร็จ:\nรหัส: ${code}\nชื่อ: ${name}`);
+      closeForm();
     }
   </script>
 </body>
