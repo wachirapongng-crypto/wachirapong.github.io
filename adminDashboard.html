@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="adminDashboard.css">
+</head>
+<body>
+  <header>
+    <h1>ระบบจัดการครุภัณฑ์ (Admin)</h1>
+    <div class="user-info">Username: <span id="username">admin123</span></div>
+  </header>
+
+  <main class="dashboard">
+    <div class="card" onclick="openForm('add')">➕ เพิ่มรายการครุภัณฑ์</div>
+    <div class="card" onclick="openForm('edit')">✏️ แก้ไขรายการครุภัณฑ์</div>
+    <div class="card" onclick="openForm('wait')">🕓 ครุภัณฑ์ที่รอตรวจสอบ</div>
+    <div class="card" onclick="openForm('report')">📊 ออกรายงานครุภัณฑ์</div>
+    <div class="card" onclick="openForm('list')">📋 รายการครุภัณฑ์ทั้งหมด</div>
+    <div class="card" onclick="openForm('manual')">📘 คู่มือการใช้งาน</div>
+    <div class="card" onclick="openForm('user')">👥 จัดการสมาชิก</div>
+  </main>
+
+  <section id="form-section" class="hidden">
+    <div class="form-box">
+      <span class="close-btn" onclick="closeForm()">×</span>
+      <h2 id="form-title">ฟอร์ม</h2>
+      <div id="form-content"></div>
+    </div>
+  </section>
+
+  <script src="scripts/sheet.js"></script>
+  <script>
+    // โหลดชื่อผู้ใช้จาก localStorage
+    document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
+
+    function openForm(type) {
+      const section = document.getElementById("form-section");
+      const title = document.getElementById("form-title");
+      const content = document.getElementById("form-content");
+      section.classList.remove("hidden");
+
+      switch(type) {
+        case 'add':
+          title.textContent = "เพิ่มรายการครุภัณฑ์";
+          content.innerHTML = `
+            <label>รหัสครุภัณฑ์:</label><input type="text" id="code"><br>
+            <label>ชื่อครุภัณฑ์:</label><input type="text" id="name"><br>
+            <button onclick="saveData()">บันทึก</button>
+          `;
+          break;
+
+        case 'edit':
+          title.textContent = "แก้ไขรายการครุภัณฑ์";
+          content.innerHTML = `<p>เลือกรายการที่ต้องการแก้ไขจากชีต <b>DATA</b></p>`;
+          break;
+
+        case 'wait':
+          title.textContent = "ครุภัณฑ์ที่รอตรวจสอบ";
+          content.innerHTML = `<p>ข้อมูลจากชีต <b>WAIT</b> จะมาแสดงที่นี่</p>`;
+          break;
+
+        case 'report':
+          title.textContent = "ออกรายงานครุภัณฑ์";
+          content.innerHTML = `<input type="month" id="month"><button>แสดงรายงาน</button>`;
+          break;
+
+        case 'list':
+          title.textContent = "รายการครุภัณฑ์ทั้งหมด";
+          content.innerHTML = `<p>ดึงข้อมูลจากชีต <b>DATA</b></p>`;
+          break;
+
+        case 'manual':
+          title.textContent = "คู่มือการใช้งาน";
+          content.innerHTML = `<p>อธิบายขั้นตอนการใช้งานระบบ...</p>`;
+          break;
+
+        case 'user':
+          title.textContent = "จัดการสมาชิก";
+          content.innerHTML = `<p>ฟังก์ชันเพิ่ม-ลบ-แก้ไขผู้ใช้ (ชีต LOGIN)</p>`;
+          break;
+      }
+    }
+
+    function closeForm() {
+      document.getElementById("form-section").classList.add("hidden");
+    }
+  </script>
+</body>
+</html>
