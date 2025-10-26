@@ -9,7 +9,12 @@
 <body>
   <header>
     <h1>ระบบจัดการครุภัณฑ์ (Admin)</h1>
-    <div class="user-info">Username: <span id="username">admin123</span></div>
+    <div class="header-right">
+      <div class="user-info">
+        👤 <span id="username">Admin</span>
+      </div>
+      <button id="logout-btn" onclick="logout()">ออกจากระบบ</button>
+    </div>
   </header>
 
   <main class="dashboard">
@@ -22,6 +27,7 @@
     <div class="card" onclick="openForm('user')">👥 จัดการสมาชิก</div>
   </main>
 
+  <!-- ฟอร์มแสดงผล -->
   <section id="form-section" class="hidden">
     <div class="form-box">
       <span class="close-btn" onclick="closeForm()">×</span>
@@ -35,13 +41,14 @@
     // โหลดชื่อผู้ใช้จาก localStorage
     document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
 
+    // เปิดฟอร์มตามประเภท
     function openForm(type) {
       const section = document.getElementById("form-section");
       const title = document.getElementById("form-title");
       const content = document.getElementById("form-content");
       section.classList.remove("hidden");
 
-      switch(type) {
+      switch (type) {
         case 'add':
           title.textContent = "เพิ่มรายการครุภัณฑ์";
           content.innerHTML = `
@@ -63,7 +70,10 @@
 
         case 'report':
           title.textContent = "ออกรายงานครุภัณฑ์";
-          content.innerHTML = `<input type="month" id="month"><button>แสดงรายงาน</button>`;
+          content.innerHTML = `
+            <input type="month" id="month">
+            <button>แสดงรายงาน</button>
+          `;
           break;
 
         case 'list':
@@ -80,11 +90,22 @@
           title.textContent = "จัดการสมาชิก";
           content.innerHTML = `<p>ฟังก์ชันเพิ่ม-ลบ-แก้ไขผู้ใช้ (ชีต LOGIN)</p>`;
           break;
+
+        default:
+          closeForm();
+          break;
       }
     }
 
+    // ปิดฟอร์ม
     function closeForm() {
       document.getElementById("form-section").classList.add("hidden");
+    }
+
+    // ออกจากระบบ
+    function logout() {
+      localStorage.removeItem("username");
+      window.location.href = "login.html";
     }
   </script>
 </body>
