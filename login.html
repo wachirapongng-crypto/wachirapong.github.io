@@ -85,9 +85,9 @@
         localStorage.setItem("loginUser", JSON.stringify(user));
 
         if(user.Status === "admin"){
-          window.location.href = "admin.html";
+          window.location.href = "adminDashboard.html";
         } else if(user.Status === "employee"){
-          window.location.href = "employee.html";
+          window.location.href = "ีuserDashboard.html";
         } else {
           errorMessage.textContent = "สิทธิ์ผู้ใช้งานไม่ถูกต้อง";
           console.warn("Status ไม่ถูกต้อง:", user.Status);
