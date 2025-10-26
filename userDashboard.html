@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Dashboard</title>
+  <link rel="stylesheet" href="userDashboard.css">
+</head>
+<body>
+  <header>
+    <h1>แดชบอร์ดผู้ใช้งาน</h1>
+    <div class="user-info">Username: <span id="username">user001</span></div>
+  </header>
+
+  <main class="dashboard">
+    <div class="card" onclick="openForm('add')">➕ เพิ่มรายการครุภัณฑ์</div>
+    <div class="card" onclick="openForm('wait')">🕓 ครุภัณฑ์ที่รอตรวจสอบ</div>
+    <div class="card" onclick="openForm('list')">📋 รายการครุภัณฑ์ทั้งหมด</div>
+    <div class="card" onclick="openForm('manual')">📘 คู่มือการใช้งาน</div>
+  </main>
+
+  <section id="form-section" class="hidden">
+    <div class="form-box">
+      <span class="close-btn" onclick="closeForm()">×</span>
+      <h2 id="form-title">ฟอร์ม</h2>
+      <div id="form-content"></div>
+    </div>
+  </section>
+
+  <script src="scripts/sheet.js"></script>
+  <script>
+    document.getElementById("username").textContent = localStorage.getItem("username") || "User";
+
+    function openForm(type) {
+      const section = document.getElementById("form-section");
+      const title = document.getElementById("form-title");
+      const content = document.getElementById("form-content");
+      section.classList.remove("hidden");
+
+      switch(type) {
+        case 'add':
+          title.textContent = "เพิ่มรายการครุภัณฑ์";
+          content.innerHTML = `<label>ชื่อครุภัณฑ์:</label><input type="text"><br><button>บันทึก</button>`;
+          break;
+        case 'wait':
+          title.textContent = "รอตรวจสอบ";
+          content.innerHTML = `<p>แสดงข้อมูลที่ยังไม่ได้อนุมัติ</p>`;
+          break;
+        case 'list':
+          title.textContent = "รายการครุภัณฑ์ทั้งหมด";
+          content.innerHTML = `<p>ข้อมูลทั้งหมดจากชีต DATA</p>`;
+          break;
+        case 'manual':
+          title.textContent = "คู่มือการใช้งาน";
+          content.innerHTML = `<p>อธิบายขั้นตอนการใช้งานระบบ...</p>`;
+          break;
+      }
+    }
+
+    function closeForm() {
+      document.getElementById("form-section").classList.add("hidden");
+    }
+  </script>
+</body>
+</html>
