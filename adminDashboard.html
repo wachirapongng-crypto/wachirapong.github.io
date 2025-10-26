@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard</title>
+  <title>ระบบจัดการครุภัณฑ์ (Admin)</title>
   <style>
     body {
       font-family: "Prompt", sans-serif;
@@ -50,10 +50,10 @@
       background-color: #e60000;
     }
 
-    /* การ์ดเมนูหลัก */
+    /* การ์ดเมนู */
     .dashboard {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 20px;
       padding: 30px;
     }
@@ -76,7 +76,7 @@
       transform: translateY(-4px);
     }
 
-    /* ฟอร์ม */
+    /* ฟอร์ม popup */
     #form-section {
       position: fixed;
       top: 0;
@@ -99,10 +99,12 @@
       padding: 25px;
       border-radius: 12px;
       width: 90%;
-      max-width: 450px;
+      max-width: 600px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.3);
       position: relative;
       animation: fadeIn 0.3s ease;
+      overflow-y: auto;
+      max-height: 85vh;
     }
 
     .close-btn {
@@ -119,7 +121,7 @@
       color: red;
     }
 
-    .form-box input, .form-box button {
+    .form-box input, .form-box select, .form-box button {
       width: 100%;
       padding: 10px;
       margin: 8px 0;
@@ -137,6 +139,23 @@
 
     .form-box button:hover {
       background-color: #0056b3;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #007bff;
+      color: white;
     }
 
     @keyframes fadeIn {
@@ -165,7 +184,7 @@
   </main>
 
   <section id="form-section">
-    <div class="form-box" id="form-box">
+    <div class="form-box">
       <span class="close-btn" onclick="closeForm()">×</span>
       <h2 id="form-title">ฟอร์ม</h2>
       <div id="form-content"></div>
@@ -173,68 +192,154 @@
   </section>
 
   <script>
-    // โหลดชื่อผู้ใช้จาก localStorage
+    // ดึงชื่อผู้ใช้
     document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
 
+    const SHEET_URL = {
+      DATA: "https://script.google.com/macros/s/AKfycbxoRCozkyX7tBQIEZsJIo6QbyltvFi9xxuZToAiJpq89C2kVeT8Bycv3JtT_OaA_vc_/exec?sheet=DATA",
+      WAIT: "https://script.google.com/macros/s/AKfycbxoRCozkyX7tBQIEZsJIo6QbyltvFi9xxuZToAiJpq89C2kVeT8Bycv3JtT_OaA_vc_/exec?sheet=WAIT",
+      SHOW: "https://script.google.com/macros/s/AKfycbxoRCozkyX7tBQIEZsJIo6QbyltvFi9xxuZToAiJpq89C2kVeT8Bycv3JtT_OaA_vc_/exec?sheet=SHOW",
+      LOGIN: "https://script.google.com/macros/s/AKfycbxoRCozkyX7tBQIEZsJIo6QbyltvFi9xxuZToAiJpq89C2kVeT8Bycv3JtT_OaA_vc_/exec?sheet=LOGIN"
+    };
+
     const formSection = document.getElementById("form-section");
-    const formBox = document.getElementById("form-box");
+    const formTitle = document.getElementById("form-title");
+    const formContent = document.getElementById("form-content");
 
-    // เปิดฟอร์ม
     function openForm(type) {
-      const title = document.getElementById("form-title");
-      const content = document.getElementById("form-content");
       formSection.classList.add("show");
+      formContent.innerHTML = "";
 
-      switch (type) {
+      switch(type) {
         case 'add':
-          title.textContent = "เพิ่มรายการครุภัณฑ์";
-          content.innerHTML = `
+          formTitle.textContent = "➕ เพิ่มรายการครุภัณฑ์";
+          formContent.innerHTML = `
             <label>รหัสครุภัณฑ์:</label><input type="text" id="code">
             <label>ชื่อครุภัณฑ์:</label><input type="text" id="name">
             <button onclick="saveData()">บันทึก</button>`;
           break;
 
         case 'edit':
-          title.textContent = "แก้ไขรายการครุภัณฑ์";
-          content.innerHTML = `<p>เลือกรายการที่ต้องการแก้ไขจากชีต <b>DATA</b></p>`;
+          formTitle.textContent = "✏️ แก้ไขรายการครุภัณฑ์";
+          loadData('edit');
           break;
 
         case 'wait':
-          title.textContent = "ครุภัณฑ์ที่รอตรวจสอบ";
-          content.innerHTML = `<p>ข้อมูลจากชีต <b>WAIT</b> จะมาแสดงที่นี่</p>`;
+          formTitle.textContent = "🕓 ครุภัณฑ์ที่รอตรวจสอบ";
+          loadData('wait');
           break;
 
         case 'report':
-          title.textContent = "ออกรายงานครุภัณฑ์";
-          content.innerHTML = `<input type="month" id="month"><button>แสดงรายงาน</button>`;
+          formTitle.textContent = "📊 ออกรายงานครุภัณฑ์";
+          formContent.innerHTML = `
+            <label>เลือกเดือนหรือปี:</label>
+            <input type="month" id="month">
+            <button onclick="loadReport()">แสดงรายงาน</button>
+            <div id="report-result"></div>`;
           break;
 
         case 'list':
-          title.textContent = "รายการครุภัณฑ์ทั้งหมด";
-          content.innerHTML = `<p>ดึงข้อมูลจากชีต <b>DATA</b></p>`;
+          formTitle.textContent = "📋 รายการครุภัณฑ์ทั้งหมด";
+          loadData('list');
           break;
 
         case 'manual':
-          title.textContent = "คู่มือการใช้งาน";
-          content.innerHTML = `<p>อธิบายขั้นตอนการใช้งานระบบ...</p>`;
+          formTitle.textContent = "📘 คู่มือการใช้งาน";
+          formContent.innerHTML = `
+            <p>1. คลิกปุ่ม "เพิ่มรายการครุภัณฑ์" เพื่อเพิ่มข้อมูลใหม่</p>
+            <p>2. คลิกปุ่ม "แก้ไขรายการครุภัณฑ์" เพื่อแก้ไขข้อมูลที่มีอยู่</p>
+            <p>3. คลิกปุ่ม "ครุภัณฑ์ที่รอตรวจสอบ" เพื่อดูอุปกรณ์ที่สแกนไว้ก่อนส่งเข้า DATA</p>
+            <p>4. คลิกปุ่ม "ออกรายงาน" เพื่อกรองข้อมูลตามเดือนหรือปี</p>
+            <p>5. คลิกปุ่ม "จัดการสมาชิก" เพื่อเพิ่ม/ลบ/แก้ไขผู้ใช้ระบบ</p>`;
           break;
 
         case 'user':
-          title.textContent = "จัดการสมาชิก";
-          content.innerHTML = `<p>ฟังก์ชันเพิ่ม-ลบ-แก้ไขผู้ใช้ (ชีต LOGIN)</p>`;
+          formTitle.textContent = "👥 จัดการสมาชิก";
+          loadData('user');
           break;
       }
     }
 
-    // ปิดฟอร์ม (ทำงานทั้งจากปุ่ม × และคลิกนอกกรอบ)
     function closeForm() {
       formSection.classList.remove("show");
     }
 
-    // ถ้าคลิกนอกกล่องให้ปิดฟอร์ม
-    formSection.addEventListener("click", (e) => {
-      if (e.target === formSection) closeForm();
-    });
+    // ดึงข้อมูลจากชีตต่างๆ
+    function loadData(sheetType) {
+      let url = SHEET_URL.DATA;
+      if (sheetType === 'wait') url = SHEET_URL.WAIT;
+      if (sheetType === 'user') url = SHEET_URL.LOGIN;
+
+      formContent.innerHTML = "<p>กำลังโหลดข้อมูล...</p>";
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (!Array.isArray(data) || data.length === 0) {
+            formContent.innerHTML = "<p>ไม่พบข้อมูล</p>";
+            return;
+          }
+
+          let table = `<table><tr>`;
+          Object.keys(data[0]).forEach(key => table += `<th>${key}</th>`);
+          table += `</tr>`;
+
+          data.forEach(row => {
+            table += `<tr>`;
+            Object.values(row).forEach(val => table += `<td>${val}</td>`);
+            table += `</tr>`;
+          });
+          table += "</table>";
+          formContent.innerHTML = table;
+        })
+        .catch(() => formContent.innerHTML = "<p style='color:red;'>ไม่สามารถโหลดข้อมูลได้</p>");
+    }
+
+    // ฟังก์ชันบันทึกข้อมูลลงชีต DATA
+    function saveData() {
+      const code = document.getElementById("code").value.trim();
+      const name = document.getElementById("name").value.trim();
+      if (!code || !name) return alert("กรุณากรอกข้อมูลให้ครบ");
+
+      fetch(SHEET_URL.DATA, {
+        method: "POST",
+        body: JSON.stringify({ code, name }),
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(res => res.text())
+      .then(() => {
+        alert("บันทึกสำเร็จ");
+        closeForm();
+      })
+      .catch(() => alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล"));
+    }
+
+    // แสดงรายงาน (ชีต SHOW)
+    function loadReport() {
+      const month = document.getElementById("month").value;
+      if (!month) return alert("กรุณาเลือกเดือนก่อน");
+      const reportDiv = document.getElementById("report-result");
+      reportDiv.innerHTML = "<p>กำลังโหลดรายงาน...</p>";
+
+      fetch(SHEET_URL.SHOW + "&month=" + month)
+        .then(res => res.json())
+        .then(data => {
+          if (!Array.isArray(data) || data.length === 0) {
+            reportDiv.innerHTML = "<p>ไม่พบข้อมูลรายงาน</p>";
+            return;
+          }
+
+          let table = `<table><tr>`;
+          Object.keys(data[0]).forEach(k => table += `<th>${k}</th>`);
+          table += "</tr>";
+          data.forEach(row => {
+            table += "<tr>" + Object.values(row).map(v => `<td>${v}</td>`).join("") + "</tr>";
+          });
+          table += "</table>";
+          reportDiv.innerHTML = table;
+        })
+        .catch(() => reportDiv.innerHTML = "<p style='color:red;'>ไม่สามารถโหลดรายงานได้</p>");
+    }
 
     // ออกจากระบบ
     function logout() {
@@ -242,17 +347,10 @@
       window.location.href = "login.html";
     }
 
-    // บันทึกข้อมูลจำลอง
-    function saveData() {
-      const code = document.getElementById("code").value.trim();
-      const name = document.getElementById("name").value.trim();
-      if (!code || !name) {
-        alert("กรุณากรอกข้อมูลให้ครบ");
-        return;
-      }
-      alert(`บันทึกสำเร็จ:\nรหัส: ${code}\nชื่อ: ${name}`);
-      closeForm();
-    }
+    // ปิด popup เมื่อคลิกนอกกล่อง
+    formSection.addEventListener("click", e => {
+      if (e.target === formSection) closeForm();
+    });
   </script>
 </body>
 </html>
