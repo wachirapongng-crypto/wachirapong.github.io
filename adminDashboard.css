@@ -70,6 +70,10 @@ header h1 {
   transform: translateY(-5px);
 }
 
+.hidden {
+  display: none;
+}
+
 /* ฟอร์มแสดงผล */
 #form-section {
   position: fixed;
@@ -82,10 +86,6 @@ header h1 {
   justify-content: center;
   align-items: center;
   z-index: 1000;
-}
-
-.hidden {
-  display: none;
 }
 
 .form-box {
