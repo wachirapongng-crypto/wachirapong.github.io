@@ -5,68 +5,67 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Dashboard</title>
 <style>
-body {font-family:"Prompt",sans-serif; margin:0; background:#f4f6f9;}
-header {background:#007bff;color:white; padding:15px 25px; display:flex; justify-content:space-between; align-items:center;}
-header h1 {margin:0;font-size:1.3rem;}
-.header-right {display:flex; align-items:center; gap:15px;}
-.user-info {font-weight:bold;}
-#logout-btn {background:#ff4d4d;border:none;color:white;padding:8px 15px;border-radius:6px;cursor:pointer; transition:.3s;}
-#logout-btn:hover {background:#e60000;}
-.dashboard {display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:20px; padding:30px;}
-.card {background:white; border-radius:12px; box-shadow:0 2px 6px rgba(0,0,0,0.1); padding:25px; text-align:center; font-size:1.1rem; font-weight:500; cursor:pointer; transition:.3s;}
-.card:hover {background:#007bff;color:white; transform:translateY(-4px);}
-#form-section {position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); display:none; justify-content:center; align-items:center; z-index:1000;}
-#form-section.show {display:flex;}
-.form-box {background:white; padding:25px; border-radius:12px; width:90%; max-width:700px; box-shadow:0 5px 15px rgba(0,0,0,0.3); position:relative; animation:fadeIn .3s ease; overflow-y:auto; max-height:85vh;}
-.close-btn {position:absolute; top:10px; right:15px; font-size:1.5rem; cursor:pointer; color:#666; transition:.3s;}
-.close-btn:hover {color:red;}
-.form-box input, .form-box select, .form-box button {width:100%; padding:10px; margin:8px 0; font-size:1rem;}
-.form-box button {background:#007bff;border:none;color:white;border-radius:6px; cursor:pointer; transition:.3s;}
-.form-box button:hover {background:#0056b3;}
-table {width:100%; border-collapse:collapse; margin-top:10px;}
-th, td {border:1px solid #ccc; padding:8px; text-align:center;}
-th {background:#007bff;color:white;}
-@keyframes fadeIn {from{opacity:0;transform:translateY(-10px);} to{opacity:1; transform:translateY(0);}}
+body{font-family:"Prompt",sans-serif; margin:0; background:#f4f6f9;}
+header{background:#007bff;color:white;padding:15px 25px; display:flex; justify-content:space-between; align-items:center;}
+header h1{margin:0;font-size:1.3rem;}
+.header-right{display:flex; align-items:center; gap:15px;}
+.user-info{font-weight:bold;}
+#logout-btn{background:#ff4d4d;border:none;color:white;padding:8px 15px;border-radius:6px;cursor:pointer; transition:.3s;}
+#logout-btn:hover{background:#e60000;}
+.dashboard{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:20px; padding:30px;}
+.card{background:white;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.1);padding:25px;text-align:center;font-size:1.1rem;font-weight:500;cursor:pointer;transition:.3s;}
+.card:hover{background:#007bff;color:white; transform:translateY(-4px);}
+#form-section{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);display:none;justify-content:center;align-items:center;z-index:1000;}
+#form-section.show{display:flex;}
+.form-box{background:white; padding:25px;border-radius:12px;width:90%;max-width:700px; box-shadow:0 5px 15px rgba(0,0,0,0.3); position:relative;animation:fadeIn .3s ease; overflow-y:auto; max-height:85vh;}
+.close-btn{position:absolute;top:10px; right:15px; font-size:1.5rem; cursor:pointer; color:#666; transition:.3s;}
+.close-btn:hover{color:red;}
+.form-box input, .form-box select, .form-box button{width:100%; padding:10px; margin:8px 0; font-size:1rem;}
+.form-box button{background:#007bff; border:none;color:white;border-radius:6px; cursor:pointer; transition:.3s;}
+.form-box button:hover{background:#0056b3;}
+table{width:100%; border-collapse:collapse; margin-top:10px;}
+th,td{border:1px solid #ccc; padding:8px; text-align:center;}
+th{background:#007bff;color:white;}
+@keyframes fadeIn{from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:translateY(0);}}
 </style>
 </head>
 <body>
 
 <header>
-  <h1>ระบบจัดการครุภัณฑ์ (Admin)</h1>
-  <div class="header-right">
-    <div class="user-info">👤 <span id="username">Admin</span></div>
-    <button id="logout-btn" onclick="logout()">ออกจากระบบ</button>
-  </div>
+<h1>ระบบจัดการครุภัณฑ์ (Admin)</h1>
+<div class="header-right">
+  <div class="user-info">👤 <span id="username">Admin</span></div>
+  <button id="logout-btn" onclick="logout()">ออกจากระบบ</button>
+</div>
 </header>
 
 <main class="dashboard">
-  <div class="card" onclick="openForm('add')">➕ เพิ่มรายการครุภัณฑ์</div>
-  <div class="card" onclick="openForm('edit')">✏️ แก้ไขรายการครุภัณฑ์</div>
-  <div class="card" onclick="openForm('wait')">🕓 ครุภัณฑ์ที่รอตรวจสอบ</div>
-  <div class="card" onclick="openForm('report')">📊 ออกรายงานครุภัณฑ์</div>
-  <div class="card" onclick="openForm('list')">📋 รายการครุภัณฑ์ทั้งหมด</div>
-  <div class="card" onclick="openForm('manual')">📘 คู่มือการใช้งาน</div>
-  <div class="card" onclick="openForm('user')">👥 จัดการสมาชิก</div>
+<div class="card" onclick="openForm('add')">➕ เพิ่มรายการครุภัณฑ์</div>
+<div class="card" onclick="openForm('edit')">✏️ แก้ไขรายการครุภัณฑ์</div>
+<div class="card" onclick="openForm('wait')">🕓 ครุภัณฑ์ที่รอตรวจสอบ</div>
+<div class="card" onclick="openForm('report')">📊 ออกรายงานครุภัณฑ์</div>
+<div class="card" onclick="openForm('list')">📋 รายการครุภัณฑ์ทั้งหมด</div>
+<div class="card" onclick="openForm('manual')">📘 คู่มือการใช้งาน</div>
+<div class="card" onclick="openForm('user')">👥 จัดการสมาชิก</div>
 </main>
 
 <section id="form-section">
-  <div class="form-box">
-    <span class="close-btn" onclick="closeForm()">×</span>
-    <h2 id="form-title">ฟอร์ม</h2>
-    <div id="form-content"></div>
-  </div>
+<div class="form-box">
+  <span class="close-btn" onclick="closeForm()">×</span>
+  <h2 id="form-title">ฟอร์ม</h2>
+  <div id="form-content"></div>
+</div>
 </section>
 
 <script>
-// โหลดชื่อผู้ใช้
-document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
+document.getElementById("username").textContent = localStorage.getItem("username")||"Admin";
 
-// URL ของ Google Apps Script (ปรับให้ตรงกับของคุณ)
+// แก้ไขเป็น URL Web App ของคุณ
 const SHEET_URL = {
-  DATA: "https://script.google.com/macros/s/AKfycbxoRCozkyX7tBQIEZsJIo6QbyltvFi9xxuZToAiJpq89C2kVeT8Bycv3JtT_OaA_vc_/exec?sheet=DATA",
-  WAIT: "https://script.google.com/macros/s/AKfycbxoRCozkyX7tBQIEZsJIo6QbyltvFi9xxuZToAiJpq89C2kVeT8Bycv3JtT_OaA_vc_/exec?sheet=WAIT",
-  SHOW: "https://script.google.com/macros/s/AKfycbxoRCozkyX7tBQIEZsJIo6QbyltvFi9xxuZToAiJpq89C2kVeT8Bycv3JtT_OaA_vc_/exec?sheet=SHOW",
-  LOGIN: "https://script.google.com/macros/s/AKfycbxoRCozkyX7tBQIEZsJIo6QbyltvFi9xxuZToAiJpq89C2kVeT8Bycv3JtT_OaA_vc_/exec?sheet=LOGIN"
+  DATA: "https://script.google.com/macros/s/YOUR_DEPLOY_ID/exec?sheet=DATA",
+  WAIT: "https://script.google.com/macros/s/YOUR_DEPLOY_ID/exec?sheet=WAIT",
+  SHOW: "https://script.google.com/macros/s/YOUR_DEPLOY_ID/exec?sheet=SHOW",
+  LOGIN: "https://script.google.com/macros/s/YOUR_DEPLOY_ID/exec?sheet=LOGIN"
 };
 
 const formSection = document.getElementById("form-section");
@@ -85,17 +84,14 @@ function openForm(type){
         <label>ชื่อครุภัณฑ์:</label><input type="text" id="name">
         <button onclick="saveData()">บันทึก</button>`;
       break;
-
     case 'edit':
       formTitle.textContent="✏️ แก้ไขรายการครุภัณฑ์";
-      loadData('DATA',true); // edit mode
+      loadData('DATA',true);
       break;
-
     case 'wait':
       formTitle.textContent="🕓 ครุภัณฑ์ที่รอตรวจสอบ";
       loadData('WAIT');
       break;
-
     case 'report':
       formTitle.textContent="📊 ออกรายงานครุภัณฑ์";
       formContent.innerHTML=`
@@ -104,12 +100,10 @@ function openForm(type){
         <button onclick="loadReport()">แสดงรายงาน</button>
         <div id="report-result"></div>`;
       break;
-
     case 'list':
       formTitle.textContent="📋 รายการครุภัณฑ์ทั้งหมด";
       loadData('DATA');
       break;
-
     case 'manual':
       formTitle.textContent="📘 คู่มือการใช้งาน";
       formContent.innerHTML=`
@@ -119,7 +113,6 @@ function openForm(type){
         <p>4. ออกรายงาน → เลือกเดือน/ปี แสดงตารางรายงาน</p>
         <p>5. จัดการสมาชิก → เพิ่ม/ลบ/แก้ไขผู้ใช้ระบบ</p>`;
       break;
-
     case 'user':
       formTitle.textContent="👥 จัดการสมาชิก";
       loadData('LOGIN');
@@ -128,19 +121,11 @@ function openForm(type){
 }
 
 function closeForm(){ formSection.classList.remove("show"); }
+formSection.addEventListener("click", e=>{ if(e.target===formSection) closeForm(); });
+function logout(){ localStorage.removeItem("username"); window.location.href="login.html"; }
 
-formSection.addEventListener("click", e => { if(e.target===formSection) closeForm(); });
-
-function logout(){
-  localStorage.removeItem("username");
-  window.location.href="login.html";
-}
-
-// โหลดข้อมูลจากชีต
 function loadData(sheet,edit=false){
-  let url = SHEET_URL[sheet];
-  formContent.innerHTML="<p>กำลังโหลดข้อมูล...</p>";
-  fetch(url)
+  fetch(SHEET_URL[sheet])
     .then(res=>res.json())
     .then(data=>{
       if(!Array.isArray(data)||data.length===0){ formContent.innerHTML="<p>ไม่พบข้อมูล</p>"; return; }
@@ -160,28 +145,21 @@ function loadData(sheet,edit=false){
     .catch(()=>formContent.innerHTML="<p style='color:red;'>ไม่สามารถโหลดข้อมูลได้</p>");
 }
 
-// เพิ่มรายการใหม่
 function saveData(){
   const code=document.getElementById("code").value.trim();
   const name=document.getElementById("name").value.trim();
   if(!code||!name){ alert("กรุณากรอกข้อมูลให้ครบ"); return; }
-
   fetch(SHEET_URL.DATA,{
     method:"POST",
-    body:JSON.stringify({ "รหัสครุภัณฑ์":code, "ชื่อครุภัณฑ์":name }),
-    headers:{"Content-Type":"application/json"}
-  })
-  .then(res=>res.text())
-  .then(()=>{ alert("บันทึกสำเร็จ"); closeForm(); })
-  .catch(()=>alert("เกิดข้อผิดพลาดในการบันทึก"));
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({"รหัสครุภัณฑ์":code,"ชื่อครุภัณฑ์":name})
+  }).then(res=>res.json())
+    .then(()=>{ alert("บันทึกสำเร็จ"); closeForm(); })
+    .catch(()=>alert("เกิดข้อผิดพลาดในการบันทึก"));
 }
 
-// ฟังก์ชันแก้ไข (ตัวอย่าง)
-function editItem(index){
-  alert("สามารถต่อยอดแก้ไขรายการที่ index: "+index+" ได้ที่นี่");
-}
+function editItem(index){ alert("สามารถต่อยอดแก้ไขรายการที่ index: "+index+" ได้ที่นี่"); }
 
-// แสดงรายงาน
 function loadReport(){
   const month=document.getElementById("month").value;
   if(!month){ alert("กรุณาเลือกเดือน"); return; }
