@@ -27,15 +27,6 @@
     <div class="card" onclick="openForm('user')">👥 จัดการสมาชิก</div>
   </main>
 
-  <!-- ฟอร์มแสดงผล -->
-  <section id="form-section" class="hidden">
-    <div class="form-box">
-      <span class="close-btn" onclick="closeForm()">×</span>
-      <h2 id="form-title">ฟอร์ม</h2>
-      <div id="form-content"></div>
-    </div>
-  </section>
-
   <script>
     // โหลดชื่อผู้ใช้จาก localStorage
     document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
@@ -106,7 +97,6 @@
       localStorage.removeItem("username");
       window.location.href = "login.html";
     }
-
     // ตัวอย่างจำลองการบันทึก (สามารถเชื่อม Google Sheet ได้ภายหลัง)
     function saveData() {
       const code = document.getElementById("code").value.trim();
