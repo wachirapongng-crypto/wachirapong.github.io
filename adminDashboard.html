@@ -4,15 +4,152 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard</title>
-  <link rel="stylesheet" href="adminDashboard.css">
+  <style>
+    body {
+      font-family: "Prompt", sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+    }
+
+    /* ส่วนหัว */
+    header {
+      background-color: #007bff;
+      color: white;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .user-info {
+      font-weight: bold;
+    }
+
+    #logout-btn {
+      background-color: #ff4d4d;
+      border: none;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    #logout-btn:hover {
+      background-color: #e60000;
+    }
+
+    /* การ์ดเมนูหลัก */
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      padding: 30px;
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 25px;
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .card:hover {
+      background-color: #007bff;
+      color: white;
+      transform: translateY(-4px);
+    }
+
+    /* ฟอร์ม */
+    #form-section {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    #form-section.show {
+      display: flex;
+    }
+
+    .form-box {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 450px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+      position: relative;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #666;
+      transition: 0.3s;
+    }
+
+    .close-btn:hover {
+      color: red;
+    }
+
+    .form-box input, .form-box button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      font-size: 1rem;
+    }
+
+    .form-box button {
+      background-color: #007bff;
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .form-box button:hover {
+      background-color: #0056b3;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </head>
 <body>
   <header>
     <h1>ระบบจัดการครุภัณฑ์ (Admin)</h1>
     <div class="header-right">
-      <div class="user-info">
-        👤 <span id="username">Admin</span>
-      </div>
+      <div class="user-info">👤 <span id="username">Admin</span></div>
       <button id="logout-btn" onclick="logout()">ออกจากระบบ</button>
     </div>
   </header>
@@ -27,34 +164,34 @@
     <div class="card" onclick="openForm('user')">👥 จัดการสมาชิก</div>
   </main>
 
-    <!-- ฟอร์มแสดงผล -->
-  <section id="form-section" class="hidden">
-    <div class="form-box">
+  <section id="form-section">
+    <div class="form-box" id="form-box">
       <span class="close-btn" onclick="closeForm()">×</span>
       <h2 id="form-title">ฟอร์ม</h2>
       <div id="form-content"></div>
     </div>
   </section>
-  
+
   <script>
     // โหลดชื่อผู้ใช้จาก localStorage
     document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
 
-    // เปิดฟอร์มตามประเภท
+    const formSection = document.getElementById("form-section");
+    const formBox = document.getElementById("form-box");
+
+    // เปิดฟอร์ม
     function openForm(type) {
-      const section = document.getElementById("form-section");
       const title = document.getElementById("form-title");
       const content = document.getElementById("form-content");
-      section.classList.remove("hidden");
+      formSection.classList.add("show");
 
       switch (type) {
         case 'add':
           title.textContent = "เพิ่มรายการครุภัณฑ์";
           content.innerHTML = `
-            <label>รหัสครุภัณฑ์:</label><input type="text" id="code"><br>
-            <label>ชื่อครุภัณฑ์:</label><input type="text" id="name"><br>
-            <button onclick="saveData()">บันทึก</button>
-          `;
+            <label>รหัสครุภัณฑ์:</label><input type="text" id="code">
+            <label>ชื่อครุภัณฑ์:</label><input type="text" id="name">
+            <button onclick="saveData()">บันทึก</button>`;
           break;
 
         case 'edit':
@@ -69,10 +206,7 @@
 
         case 'report':
           title.textContent = "ออกรายงานครุภัณฑ์";
-          content.innerHTML = `
-            <input type="month" id="month">
-            <button>แสดงรายงาน</button>
-          `;
+          content.innerHTML = `<input type="month" id="month"><button>แสดงรายงาน</button>`;
           break;
 
         case 'list':
@@ -89,32 +223,34 @@
           title.textContent = "จัดการสมาชิก";
           content.innerHTML = `<p>ฟังก์ชันเพิ่ม-ลบ-แก้ไขผู้ใช้ (ชีต LOGIN)</p>`;
           break;
-
-        default:
-          closeForm();
-          break;
       }
     }
 
-    // ปิดฟอร์ม
+    // ปิดฟอร์ม (ทำงานทั้งจากปุ่ม × และคลิกนอกกรอบ)
     function closeForm() {
-      document.getElementById("form-section").classList.add("hidden");
+      formSection.classList.remove("show");
     }
+
+    // ถ้าคลิกนอกกล่องให้ปิดฟอร์ม
+    formSection.addEventListener("click", (e) => {
+      if (e.target === formSection) closeForm();
+    });
 
     // ออกจากระบบ
     function logout() {
       localStorage.removeItem("username");
       window.location.href = "login.html";
     }
-    // ตัวอย่างจำลองการบันทึก (สามารถเชื่อม Google Sheet ได้ภายหลัง)
+
+    // บันทึกข้อมูลจำลอง
     function saveData() {
       const code = document.getElementById("code").value.trim();
       const name = document.getElementById("name").value.trim();
       if (!code || !name) {
-        alert("กรุณากรอกข้อมูลให้ครบถ้วน");
+        alert("กรุณากรอกข้อมูลให้ครบ");
         return;
       }
-      alert(`บันทึกข้อมูลสำเร็จ:\nรหัส: ${code}\nชื่อ: ${name}`);
+      alert(`บันทึกสำเร็จ:\nรหัส: ${code}\nชื่อ: ${name}`);
       closeForm();
     }
   </script>
