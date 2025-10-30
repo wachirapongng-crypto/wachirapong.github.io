@@ -18,6 +18,33 @@ document.addEventListener("DOMContentLoaded", () => {
   formSection.addEventListener("click", e => { if(e.target===formSection) closeForm(); });
   logoutBtn.addEventListener("click", logout);
 
+  // ฟังก์ชันสร้าง QR Code
+  function renderQRCode(val) {
+    return `<img src="https://chart.googleapis.com/chart?cht=qr&chs=120x120&chl=${encodeURIComponent(val)}" alt="QR Code">`;
+  }
+
+  // ฟังก์ชันสร้าง Barcode (Code128)
+  function renderBarcode(val) {
+    return `<img src="https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(val)}&code=Code128&translate-esc=true" alt="Barcode">`;
+  }
+
+  // กำหนดคอลัมน์ที่เป็น QR/Barcode
+  const QR_COLUMNS = ["qr_code","QR","Barcode","บาร์โค้ด"]; // ปรับชื่อคอลัมน์ให้ตรงกับ Google Sheet
+  const BARCODE_COLUMNS = ["barcode","Barcode","รหัสครุภัณฑ์"]; // ปรับตามชื่อคอลัมน์
+
+  function renderCell(key, val){
+    if(typeof val === "object" && val !== null){
+      if(val.value) return renderQRCode(val.value);
+      else return JSON.stringify(val);
+    } else if(QR_COLUMNS.includes(key)) {
+      return renderQRCode(val);
+    } else if(BARCODE_COLUMNS.includes(key)) {
+      return renderBarcode(val);
+    } else {
+      return val;
+    }
+  }
+
   window.openForm = async function(type){
     formSection.classList.add("show");
     formContent.innerHTML="";
@@ -74,13 +101,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       data.forEach(row=>{
         table+="<tr>";
-        Object.values(row).forEach(val=>{
-          if(typeof val === "object" && val !== null){
-            // กรณีเป็น QR code / Barcode
-            if(val.value) val = val.value;
-            else val = JSON.stringify(val);
-          }
-          table+=`<td>${val}</td>`;
+        Object.entries(row).forEach(([key,val])=>{
+          table+=`<td>${renderCell(key,val)}</td>`;
         });
         table+="</tr>";
       });
@@ -109,19 +131,17 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       let table="<table><tr>";
-      Object.keys(data[0]).forEach(k=>table+=`<th>${k}</th>`);
+      Object.keys(data[0]).forEach(key=>table+=`<th>${key}</th>`);
       table+="</tr>";
+
       data.forEach(row=>{
         table+="<tr>";
-        Object.values(row).forEach(val=>{
-          if(typeof val === "object" && val !== null){
-            if(val.value) val = val.value;
-            else val = JSON.stringify(val);
-          }
-          table+=`<td>${val}</td>`;
+        Object.entries(row).forEach(([key,val])=>{
+          table+=`<td>${renderCell(key,val)}</td>`;
         });
         table+="</tr>";
       });
+
       table+="</table>";
       reportDiv.innerHTML=table;
     } catch(err){
