@@ -2,10 +2,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
 
   const SHEET_URL = {
-    DATA: "https://script.google.com/macros/s/AKfycbyPhRnn_Pd53MB6rvSxQ8EQIZkih4AB_3xn-tGZkf9RFdZ7Q-B3QPLz47qPt7YHxp8r/exec?sheet=DATA",
-    WAIT: "https://script.google.com/macros/s/AKfycbyPhRnn_Pd53MB6rvSxQ8EQIZkih4AB_3xn-tGZkf9RFdZ7Q-B3QPLz47qPt7YHxp8r/exec?sheet=WAIT",
-    SHOW: "https://script.google.com/macros/s/AKfycbyPhRnn_Pd53MB6rvSxQ8EQIZkih4AB_3xn-tGZkf9RFdZ7Q-B3QPLz47qPt7YHxp8r/exec?sheet=SHOW",
-    LOGIN: "https://script.google.com/macros/s/AKfycbyPhRnn_Pd53MB6rvSxQ8EQIZkih4AB_3xn-tGZkf9RFdZ7Q-B3QPLz47qPt7YHxp8r/exec?sheet=LOGIN"
+    DATA: "https://script.google.com/macros/s/AKfycbwDe2HZtpPi6aWVOGLpq5GbWv0YvgJpuK7VEVi9ZlkdXWDZl0Y-kOM8x6euvWq3F8IB/exec?sheet=DATA",
+    WAIT: "https://script.google.com/macros/s/AKfycbwDe2HZtpPi6aWVOGLpq5GbWv0YvgJpuK7VEVi9ZlkdXWDZl0Y-kOM8x6euvWq3F8IB/exec?sheet=WAIT",
+    SHOW: "https://script.google.com/macros/s/AKfycbwDe2HZtpPi6aWVOGLpq5GbWv0YvgJpuK7VEVi9ZlkdXWDZl0Y-kOM8x6euvWq3F8IB/exec?sheet=SHOW",
+    LOGIN: "https://script.google.com/macros/s/AKfycbwDe2HZtpPi6aWVOGLpq5GbWv0YvgJpuK7VEVi9ZlkdXWDZl0Y-kOM8x6euvWq3F8IB/exec?sheet=LOGIN"
   };
 
   const formSection = document.getElementById("form-section");
@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
   formSection.addEventListener("click", e => { if(e.target===formSection) closeForm(); });
   logoutBtn.addEventListener("click", logout);
 
-  window.openForm = function(type){
+  window.openForm = async function(type){
     formSection.classList.add("show");
     formContent.innerHTML="";
 
@@ -32,11 +32,11 @@ document.addEventListener("DOMContentLoaded", () => {
         break;
       case 'edit':
         formTitle.textContent="✏️ แก้ไขรายการครุภัณฑ์";
-        loadData('DATA',true);
+        await loadData('DATA',true);
         break;
       case 'wait':
         formTitle.textContent="🕓 ครุภัณฑ์ที่รอตรวจสอบ";
-        loadData('WAIT');
+        await loadData('WAIT');
         break;
       case 'report':
         formTitle.textContent="📊 ออกรายงานครุภัณฑ์";
@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
         break;
       case 'list':
         formTitle.textContent="📋 รายการครุภัณฑ์ทั้งหมด";
-        loadData('DATA');
+        await loadData('DATA');
         break;
       case 'manual':
         formTitle.textContent="📘 คู่มือการใช้งาน";
@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
         break;
       case 'user':
         formTitle.textContent="👥 จัดการสมาชิก";
-        loadData('LOGIN');
+        await loadData('LOGIN');
         break;
     }
   }
@@ -69,19 +69,91 @@ document.addEventListener("DOMContentLoaded", () => {
   function closeForm(){ formSection.classList.remove("show"); }
   function logout(){ localStorage.removeItem("username"); window.location.href="login.html"; }
 
-  window.loadData = function(sheet,edit=false){
-    fetch(SHEET_URL[sheet])
-      .then(res=>res.json())
-      .then(data=>{
-        if(!Array.isArray(data)||data.length===0){ formContent.innerHTML="<p>ไม่พบข้อมูล</p>"; return; }
-        let table="<table><tr>";
-        Object.keys(data[0]).forEach(key=>table+=`<th>${key}</th>`);
-        if(edit) table+="<th>แก้ไข</th>";
+  window.loadData = async function(sheet,edit=false){
+    try{
+      const res = await fetch(SHEET_URL[sheet]);
+      if(!res.ok) throw new Error("HTTP error "+res.status);
+      const data = await res.json();
+      if(!Array.isArray(data) || data.length===0){
+        formContent.innerHTML="<p>ไม่พบข้อมูล</p>";
+        return;
+      }
+
+      let table="<table><tr>";
+      Object.keys(data[0]).forEach(key=>table+=`<th>${key}</th>`);
+      if(edit) table+="<th>แก้ไข</th>";
+      table+="</tr>";
+
+      data.forEach((row,i)=>{
+        table+="<tr>";
+        Object.values(row).forEach(val=>table+=`<td>${val}</td>`);
+        if(edit) table+=`<td><button onclick="editItem(${i})">แก้ไข</button></td>`;
         table+="</tr>";
-        data.forEach((row,i)=>{
-          table+="<tr>";
-          Object.values(row).forEach(val=>table+=`<td>${val}</td>`);
-          if(edit) table+=`<td><button onclick="editItem(${i})">แก้ไข</button></td>`;
-          table+="</tr>";
-        });
-        table+="</table>";
+      });
+      table+="</table>";
+      formContent.innerHTML=table;
+
+    }catch(err){
+      console.error(err);
+      formContent.innerHTML="<p style='color:red;'>ไม่สามารถโหลดข้อมูลได้</p>";
+    }
+  }
+
+  window.saveData = async function(){
+    const code = document.getElementById("code").value.trim();
+    const name = document.getElementById("name").value.trim();
+    if(!code || !name){ alert("กรุณากรอกข้อมูลให้ครบ"); return; }
+
+    try{
+      const res = await fetch(SHEET_URL.DATA,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({"รหัสครุภัณฑ์":code,"ชื่อครุภัณฑ์":name})
+      });
+      const result = await res.json();
+      if(result.status==="success"){
+        alert("บันทึกสำเร็จ");
+        closeForm();
+      } else {
+        alert("เกิดข้อผิดพลาดในการบันทึก");
+      }
+    }catch(err){
+      console.error(err);
+      alert("เกิดข้อผิดพลาดในการบันทึก");
+    }
+  }
+
+  window.editItem = function(index){
+    alert("สามารถต่อยอดแก้ไขรายการที่ index: "+index+" ได้ที่นี่");
+  }
+
+  window.loadReport = async function(){
+    const month = document.getElementById("month").value;
+    if(!month){ alert("กรุณาเลือกเดือน"); return; }
+    const reportDiv = document.getElementById("report-result");
+    reportDiv.innerHTML="<p>กำลังโหลดรายงาน...</p>";
+
+    try{
+      const res = await fetch(SHEET_URL.SHOW+"&month="+month);
+      if(!res.ok) throw new Error("HTTP error "+res.status);
+      const data = await res.json();
+      if(!Array.isArray(data) || data.length===0){
+        reportDiv.innerHTML="<p>ไม่พบข้อมูลรายงาน</p>";
+        return;
+      }
+
+      let table="<table><tr>";
+      Object.keys(data[0]).forEach(k=>table+=`<th>${k}</th>`);
+      table+="</tr>";
+      data.forEach(row=>{
+        table+="<tr>"+Object.values(row).map(v=>`<td>${v}</td>`).join("")+"</tr>";
+      });
+      table+="</table>";
+      reportDiv.innerHTML=table;
+
+    }catch(err){
+      console.error(err);
+      reportDiv.innerHTML="<p style='color:red;'>ไม่สามารถโหลดรายงานได้</p>";
+    }
+  }
+});
