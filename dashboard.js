@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // กำหนดคอลัมน์ที่เป็น QR/Barcode
-  const QR_COLUMNS = ["qr_code","QR","Barcode","บาร์โค้ด"]; // ปรับชื่อคอลัมน์ให้ตรงกับ Google Sheet
+  const QR_COLUMNS = ["qr_code","QR","Barcode","บาร์โค้ด","QR Code"]; // ปรับชื่อคอลัมน์ให้ตรงกับ Google Sheet
   const BARCODE_COLUMNS = ["barcode","Barcode","รหัสครุภัณฑ์"]; // ปรับตามชื่อคอลัมน์
 
   function renderCell(key, val){
