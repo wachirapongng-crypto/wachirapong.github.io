@@ -18,28 +18,17 @@ document.addEventListener("DOMContentLoaded", () => {
   formSection.addEventListener("click", e => { if(e.target===formSection) closeForm(); });
   logoutBtn.addEventListener("click", logout);
 
-  // ฟังก์ชันสร้าง QR Code
-  function renderQRCode(val){
-    if(!val) return "";
-    if(val.startsWith("http")) return `<img src="${val}" alt="QR Code" style="max-width:120px;max-height:120px;">`;
-    return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(val)}" alt="QR Code">`;
-  }
-
-  // ฟังก์ชันสร้าง Barcode
-  function renderBarcode(val){
-    if(!val) return "";
-    return `<img src="https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(val)}&code=Code128&translate-esc=true" alt="Barcode" style="max-height:60px;">`;
-  }
-
   const QR_COLUMNS = ["QR Code","qr_code","qr","QR"];
-  const BARCODE_COLUMNS = ["barcode","Barcode"]; // ไม่รวม "รหัสครุภัณฑ์"
 
-  function renderCell(key,val){
+  function renderCell(key, val){
+    // ถ้าเป็น object {v: "..."} ให้ใช้ค่า v
     if(typeof val === "object" && val !== null){
-      if(val.value) return renderQRCode(val.value);
+      if(val.v) val = val.v;
       else return JSON.stringify(val);
-    } else if(QR_COLUMNS.includes(key)){
-      return renderQRCode(val);
+    }
+
+    if(QR_COLUMNS.includes(key) && val){
+      return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(val)}" alt="QR Code">`;
     } else {
       return val; // แสดงข้อความปกติ
     }
@@ -96,7 +85,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let table="<table><tr>";
     const keys = Object.keys(data[0]);
     keys.forEach(key=>table+=`<th>${key}</th>`);
-    if(keys.includes("รหัสครุภัณฑ์")) table+="<th>Barcode</th>";
     table+="</tr>";
 
     data.forEach(row=>{
@@ -104,9 +92,6 @@ document.addEventListener("DOMContentLoaded", () => {
       keys.forEach(key=>{
         table+=`<td>${renderCell(key,row[key])}</td>`;
       });
-      if(keys.includes("รหัสครุภัณฑ์")){
-        table+=`<td>${renderBarcode(row["รหัสครุภัณฑ์"])}</td>`;
-      }
       table+="</tr>";
     });
 
