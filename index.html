@@ -3,12 +3,133 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>เข้าสู่ระบบ</title>
+  <title>ระบบตรวจสอบครุภัณฑ์</title>
   <link rel="stylesheet" href="index.css">
+  <style>
+    body {
+      font-family: "Prompt", sans-serif;
+      margin: 0;
+      background: #f4f6f8;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #004aad;
+      color: white;
+      padding: 10px 20px;
+    }
+
+    .search-input {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+    }
+
+    .login-btn {
+      background: white;
+      color: #004aad;
+      padding: 6px 12px;
+      border-radius: 8px;
+      text-decoration: none;
+      margin-left: 10px;
+      font-weight: bold;
+    }
+
+    .table-section {
+      margin: 20px;
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border-bottom: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background: #f0f0f0;
+    }
+
+    .detail-btn {
+      background: #004aad;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .detail-btn:hover {
+      background: #0062ff;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background: rgba(0,0,0,0.4);
+    }
+
+    .modal-content {
+      background: white;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 12px;
+      width: 80%;
+      max-width: 500px;
+      position: relative;
+    }
+
+    .close {
+      position: absolute;
+      right: 15px;
+      top: 10px;
+      cursor: pointer;
+      font-size: 22px;
+      color: #555;
+    }
+
+    #errorBox {
+      color: red;
+      margin-top: 10px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    #sortBtn {
+      background: #ddd;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+
+    #sortBtn:hover {
+      background: #ccc;
+    }
+  </style>
 </head>
 <body>
   <header>
-    <div class="logo">logo</div>
+    <div class="logo">LOGO</div>
     <h1>ระบบตรวจสอบครุภัณฑ์</h1>
     <div class="header-actions">
       <input type="text" id="searchInput" placeholder="ค้นหา..." class="search-input" />
@@ -20,7 +141,10 @@
     <section class="table-section">
       <div class="table-header">
         <h2>รายการครุภัณฑ์</h2>
+        <button id="sortBtn">เรียงลำดับ ↑↓</button>
       </div>
+
+      <div id="errorBox"></div>
 
       <table id="equipmentTable">
         <thead>
@@ -28,13 +152,11 @@
             <th>รหัสครุภัณฑ์</th>
             <th>ชื่อ</th>
             <th>ที่อยู่</th>
-            <th>Status</th>
+            <th>สถานะ</th>
             <th>ดูรายละเอียด</th>
           </tr>
         </thead>
-        <tbody>
-          <!-- ข้อมูลจาก Google Sheet จะถูกเพิ่มที่นี่ -->
-        </tbody>
+        <tbody></tbody>
       </table>
     </section>
   </main>
@@ -48,7 +170,6 @@
   </div>
 
   <script>
-    // 🔹 ตั้งค่าข้อมูล Google Sheet
     const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
     const sheetName = "SHOW";
     const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}&t=${Date.now()}`;
@@ -59,17 +180,16 @@
     const closeModal = document.getElementById("closeModal");
     const modalDetails = document.getElementById("modalDetails");
     const sortBtn = document.getElementById("sortBtn");
+    const errorBox = document.getElementById("errorBox");
 
     let data = [];
     let ascending = true;
 
-    // 🔹 โหลดข้อมูลจาก Google Sheet
     async function loadEquipment() {
       try {
         const res = await fetch(baseURL);
         const text = await res.text();
 
-        // ตรวจสอบว่าได้ข้อมูลจริงไหม
         if (!text.startsWith("/*O_o*/")) {
           throw new Error("ข้อมูลจาก Google Sheet ไม่ถูกต้องหรือยังไม่ได้เผยแพร่");
         }
@@ -85,15 +205,20 @@
           details: r.c[5]?.v || ""
         }));
 
+        if (data.length === 0) {
+          throw new Error("ไม่พบข้อมูลในชีต SHOW");
+        }
+
         renderTable();
+        errorBox.textContent = "";
         console.log("✅ โหลดข้อมูลสำเร็จ:", data.length, "แถว");
       } catch (error) {
         console.error("❌ โหลดข้อมูลไม่สำเร็จ:", error);
-        tableBody.innerHTML = `<tr><td colspan="5" style="color:red;">ไม่สามารถโหลดข้อมูลได้ กรุณาตรวจสอบการเผยแพร่ Google Sheet</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="5" style="color:red;">ไม่สามารถโหลดข้อมูลได้</td></tr>`;
+        errorBox.textContent = "❌ เกิดข้อผิดพลาด: " + error.message;
       }
     }
 
-    // 🔹 แสดงข้อมูลในตาราง
     function renderTable(filteredData = data) {
       filteredData.sort((a, b) =>
         ascending ? a.number - b.number : b.number - a.number
@@ -125,19 +250,16 @@
       });
     }
 
-    // 🔹 ปิด Modal
     closeModal.onclick = () => (modal.style.display = "none");
-    window.onclick = e => {
-      if (e.target == modal) modal.style.display = "none";
-    };
+    window.onclick = e => { if (e.target == modal) modal.style.display = "none"; };
 
-    // 🔹 ปุ่มสลับการเรียง ↑↓
-    sortBtn.addEventListener("click", () => {
-      ascending = !ascending;
-      renderTable();
-    });
+    if (sortBtn) {
+      sortBtn.addEventListener("click", () => {
+        ascending = !ascending;
+        renderTable();
+      });
+    }
 
-    // 🔹 ค้นหา
     searchInput.addEventListener("input", e => {
       const keyword = e.target.value.toLowerCase();
       const filtered = data.filter(item =>
@@ -149,7 +271,6 @@
       renderTable(filtered);
     });
 
-    // ✅ เรียกโหลดข้อมูลเมื่อเปิดหน้า
     loadEquipment();
   </script>
 </body>
