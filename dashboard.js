@@ -3,10 +3,10 @@ document.addEventListener("DOMContentLoaded", () => {
 document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
 
   const SHEET_URL = {
-    DATA: "https://script.google.com/macros/s/AKfycbwDe2HZtpPi6aWVOGLpq5GbWv0YvgJpuK7VEVi9ZlkdXWDZl0Y-kOM8x6euvWq3F8IB/exec?sheet=DATA",
-    WAIT: "https://script.google.com/macros/s/AKfycbwDe2HZtpPi6aWVOGLpq5GbWv0YvgJpuK7VEVi9ZlkdXWDZl0Y-kOM8x6euvWq3F8IB/exec?sheet=WAIT",
-    SHOW: "https://script.google.com/macros/s/AKfycbwDe2HZtpPi6aWVOGLpq5GbWv0YvgJpuK7VEVi9ZlkdXWDZl0Y-kOM8x6euvWq3F8IB/exec?sheet=SHOW",
-    LOGIN: "https://script.google.com/macros/s/AKfycbwDe2HZtpPi6aWVOGLpq5GbWv0YvgJpuK7VEVi9ZlkdXWDZl0Y-kOM8x6euvWq3F8IB/exec?sheet=LOGIN"
+    DATA: "https://script.google.com/macros/s/AKfycbyqlibnTibBwyvU9nPXrCd2MRC6aeeM1W8YTQ-9RJ9IRPTMeyVQDDpIB1SR3gKMYBb8/exec?sheet=DATA",
+    WAIT: "https://script.google.com/macros/s/AKfycbyqlibnTibBwyvU9nPXrCd2MRC6aeeM1W8YTQ-9RJ9IRPTMeyVQDDpIB1SR3gKMYBb8/exec?sheet=WAIT",
+    SHOW: "https://script.google.com/macros/s/AKfycbyqlibnTibBwyvU9nPXrCd2MRC6aeeM1W8YTQ-9RJ9IRPTMeyVQDDpIB1SR3gKMYBb8/exec?sheet=SHOW",
+    LOGIN: "https://script.google.com/macros/s/AKfycbyqlibnTibBwyvU9nPXrCd2MRC6aeeM1W8YTQ-9RJ9IRPTMeyVQDDpIB1SR3gKMYBb8/exec?sheet=LOGIN"
   };
 
   const formSection = document.getElementById("form-section");
