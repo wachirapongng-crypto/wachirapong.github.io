@@ -1,4 +1,3 @@
-
 document.addEventListener("DOMContentLoaded", () => {
 document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
 
@@ -24,17 +23,6 @@ document.getElementById("username").textContent = localStorage.getItem("username
     formContent.innerHTML="";
 
     switch(type){
-      case 'add':
-        formTitle.textContent="➕ เพิ่มรายการครุภัณฑ์";
-        formContent.innerHTML=`
-          <label>รหัสครุภัณฑ์:</label><input type="text" id="code">
-          <label>ชื่อครุภัณฑ์:</label><input type="text" id="name">
-          <button onclick="saveData()">บันทึก</button>`;
-        break;
-      case 'edit':
-        formTitle.textContent="✏️ แก้ไขรายการครุภัณฑ์";
-        await loadData('DATA',true);
-        break;
       case 'wait':
         formTitle.textContent="🕓 ครุภัณฑ์ที่รอตรวจสอบ";
         await loadData('WAIT');
@@ -70,7 +58,7 @@ document.getElementById("username").textContent = localStorage.getItem("username
   function closeForm(){ formSection.classList.remove("show"); }
   function logout(){ localStorage.removeItem("username"); window.location.href="login.html"; }
 
-  window.loadData = async function(sheet,edit=false){
+  window.loadData = async function(sheet){
     try {
       const res = await fetch(SHEET_URL[sheet]);
       const data = await res.json();
@@ -82,13 +70,11 @@ document.getElementById("username").textContent = localStorage.getItem("username
 
       let table="<table><tr>";
       Object.keys(data[0]).forEach(key=>table+=`<th>${key}</th>`);
-      if(edit) table+="<th>แก้ไข</th>";
       table+="</tr>";
 
-      data.forEach((row,i)=>{
+      data.forEach(row=>{
         table+="<tr>";
         Object.values(row).forEach(val=>table+=`<td>${val}</td>`);
-        if(edit) table+=`<td><button onclick="editItem(${i})">แก้ไข</button></td>`;
         table+="</tr>";
       });
 
@@ -101,30 +87,6 @@ document.getElementById("username").textContent = localStorage.getItem("username
     }
   }
 
-  window.saveData = async function(){
-    const code=document.getElementById("code").value.trim();
-    const name=document.getElementById("name").value.trim();
-    if(!code||!name){ alert("กรุณากรอกข้อมูลให้ครบ"); return; }
-
-    try {
-      const res = await fetch(SHEET_URL.DATA,{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({"รหัสครุภัณฑ์":code,"ชื่อครุภัณฑ์":name})
-      });
-      const result = await res.json();
-      if(result.status==="success"){
-        alert("บันทึกสำเร็จ");
-        closeForm();
-      }
-    } catch(err){
-      console.error(err);
-      alert("เกิดข้อผิดพลาดในการบันทึก");
-    }
-  }
-
-  window.editItem = function(index){ alert("สามารถต่อยอดแก้ไขรายการที่ index: "+index+" ได้ที่นี่"); }
-
   window.loadReport = async function(){
     const month=document.getElementById("month").value;
     if(!month){ alert("กรุณาเลือกเดือน"); return; }
@@ -134,17 +96,7 @@ document.getElementById("username").textContent = localStorage.getItem("username
     try {
       const res = await fetch(SHEET_URL.SHOW+"&month="+month);
       const data = await res.json();
-      if(!Array.isArray(data)||data.length===0){ reportDiv.innerHTML="<p>ไม่พบข้อมูลรายงาน</p>"; return; }
-
-      let table="<table><tr>";
-      Object.keys(data[0]).forEach(k=>table+=`<th>${k}</th>`);
-      table+="</tr>";
-      data.forEach(row=>{ table+="<tr>"+Object.values(row).map(v=>`<td>${v}</td>`).join("")+"</tr>"; });
-      table+="</table>";
-      reportDiv.innerHTML=table;
-    } catch(err){
-      console.error(err);
-      reportDiv.innerHTML="<p style='color:red;'>ไม่สามารถโหลดรายงานได้</p>";
-    }
-  }
-});
+      if(!Array.isArray(data)||data.length===0){ 
+        reportDiv.innerHTML="<p>ไม่พบข้อมูลรายงาน</p>"; 
+        return; 
+      }
