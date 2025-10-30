@@ -19,29 +19,29 @@ document.addEventListener("DOMContentLoaded", () => {
   logoutBtn.addEventListener("click", logout);
 
   // ฟังก์ชันสร้าง QR Code
-  function renderQRCode(val) {
-    return `<img src="https://chart.googleapis.com/chart?cht=qr&chs=120x120&chl=${encodeURIComponent(val)}" alt="QR Code">`;
+  function renderQRCode(val){
+    if(!val) return "";
+    if(val.startsWith("http")) return `<img src="${val}" alt="QR Code" style="max-width:120px;max-height:120px;">`;
+    return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(val)}" alt="QR Code">`;
   }
 
-  // ฟังก์ชันสร้าง Barcode (Code128)
-  function renderBarcode(val) {
-    return `<img src="https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(val)}&code=Code128&translate-esc=true" alt="Barcode">`;
+  // ฟังก์ชันสร้าง Barcode
+  function renderBarcode(val){
+    if(!val) return "";
+    return `<img src="https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(val)}&code=Code128&translate-esc=true" alt="Barcode" style="max-height:60px;">`;
   }
 
-  // กำหนดคอลัมน์ที่เป็น QR/Barcode
-  const QR_COLUMNS = ["qr_code","QR","Barcode","บาร์โค้ด","QR Code"]; // ปรับชื่อคอลัมน์ให้ตรงกับ Google Sheet
-  const BARCODE_COLUMNS = ["barcode","Barcode","รหัสครุภัณฑ์"]; // ปรับตามชื่อคอลัมน์
+  const QR_COLUMNS = ["QR Code","qr_code","qr","QR"];
+  const BARCODE_COLUMNS = ["barcode","Barcode"]; // ไม่รวม "รหัสครุภัณฑ์"
 
-  function renderCell(key, val){
+  function renderCell(key,val){
     if(typeof val === "object" && val !== null){
       if(val.value) return renderQRCode(val.value);
       else return JSON.stringify(val);
-    } else if(QR_COLUMNS.includes(key)) {
+    } else if(QR_COLUMNS.includes(key)){
       return renderQRCode(val);
-    } else if(BARCODE_COLUMNS.includes(key)) {
-      return renderBarcode(val);
     } else {
-      return val;
+      return val; // แสดงข้อความปกติ
     }
   }
 
@@ -85,31 +85,39 @@ document.addEventListener("DOMContentLoaded", () => {
   function closeForm(){ formSection.classList.remove("show"); }
   function logout(){ localStorage.removeItem("username"); window.location.href="login.html"; }
 
-  window.loadData = async function(sheet){
-    try {
-      const res = await fetch(SHEET_URL[sheet]);
-      const data = await res.json();
+  async function fetchData(sheet){
+    const res = await fetch(SHEET_URL[sheet]);
+    return await res.json();
+  }
 
-      if(!Array.isArray(data)||data.length===0){ 
-        formContent.innerHTML="<p>ไม่พบข้อมูล</p>"; 
-        return; 
-      }
+  async function renderTable(data){
+    if(!Array.isArray(data)||data.length===0) return "<p>ไม่พบข้อมูล</p>";
 
-      let table="<table><tr>";
-      Object.keys(data[0]).forEach(key=>table+=`<th>${key}</th>`);
-      table+="</tr>";
+    let table="<table><tr>";
+    const keys = Object.keys(data[0]);
+    keys.forEach(key=>table+=`<th>${key}</th>`);
+    if(keys.includes("รหัสครุภัณฑ์")) table+="<th>Barcode</th>";
+    table+="</tr>";
 
-      data.forEach(row=>{
-        table+="<tr>";
-        Object.entries(row).forEach(([key,val])=>{
-          table+=`<td>${renderCell(key,val)}</td>`;
-        });
-        table+="</tr>";
+    data.forEach(row=>{
+      table+="<tr>";
+      keys.forEach(key=>{
+        table+=`<td>${renderCell(key,row[key])}</td>`;
       });
+      if(keys.includes("รหัสครุภัณฑ์")){
+        table+=`<td>${renderBarcode(row["รหัสครุภัณฑ์"])}</td>`;
+      }
+      table+="</tr>";
+    });
 
-      table+="</table>";
-      formContent.innerHTML=table;
+    table+="</table>";
+    return table;
+  }
 
+  window.loadData = async function(sheet){
+    try{
+      const data = await fetchData(sheet);
+      formContent.innerHTML = await renderTable(data);
     } catch(err){
       console.error(err);
       formContent.innerHTML="<p style='color:red;'>ไม่สามารถโหลดข้อมูล JSON ได้</p>";
@@ -122,31 +130,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const reportDiv=document.getElementById("report-result");
     reportDiv.innerHTML="<p>กำลังโหลดรายงาน...</p>";
 
-    try {
-      const res = await fetch(SHEET_URL.SHOW+"&month="+month);
-      const data = await res.json();
-      if(!Array.isArray(data)||data.length===0){ 
-        reportDiv.innerHTML="<p>ไม่พบข้อมูลรายงาน</p>"; 
-        return; 
-      }
-
-      let table="<table><tr>";
-      Object.keys(data[0]).forEach(key=>table+=`<th>${key}</th>`);
-      table+="</tr>";
-
-      data.forEach(row=>{
-        table+="<tr>";
-        Object.entries(row).forEach(([key,val])=>{
-          table+=`<td>${renderCell(key,val)}</td>`;
-        });
-        table+="</tr>";
-      });
-
-      table+="</table>";
-      reportDiv.innerHTML=table;
+    try{
+      const data = await fetchData(SHEET_URL.SHOW+"&month="+month);
+      reportDiv.innerHTML = await renderTable(data);
     } catch(err){
       console.error(err);
       reportDiv.innerHTML="<p style='color:red;'>ไม่สามารถโหลดรายงานได้</p>";
     }
   }
+
 });
