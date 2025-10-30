@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
+  document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
 
   const SHEET_URL = {
     DATA: "https://script.google.com/macros/s/AKfycbyqlibnTibBwyvU9nPXrCd2MRC6aeeM1W8YTQ-9RJ9IRPTMeyVQDDpIB1SR3gKMYBb8/exec?sheet=DATA",
@@ -74,7 +74,14 @@ document.getElementById("username").textContent = localStorage.getItem("username
 
       data.forEach(row=>{
         table+="<tr>";
-        Object.values(row).forEach(val=>table+=`<td>${val}</td>`);
+        Object.values(row).forEach(val=>{
+          if(typeof val === "object" && val !== null){
+            // กรณีเป็น QR code / Barcode
+            if(val.value) val = val.value;
+            else val = JSON.stringify(val);
+          }
+          table+=`<td>${val}</td>`;
+        });
         table+="</tr>";
       });
 
@@ -100,3 +107,26 @@ document.getElementById("username").textContent = localStorage.getItem("username
         reportDiv.innerHTML="<p>ไม่พบข้อมูลรายงาน</p>"; 
         return; 
       }
+
+      let table="<table><tr>";
+      Object.keys(data[0]).forEach(k=>table+=`<th>${k}</th>`);
+      table+="</tr>";
+      data.forEach(row=>{
+        table+="<tr>";
+        Object.values(row).forEach(val=>{
+          if(typeof val === "object" && val !== null){
+            if(val.value) val = val.value;
+            else val = JSON.stringify(val);
+          }
+          table+=`<td>${val}</td>`;
+        });
+        table+="</tr>";
+      });
+      table+="</table>";
+      reportDiv.innerHTML=table;
+    } catch(err){
+      console.error(err);
+      reportDiv.innerHTML="<p style='color:red;'>ไม่สามารถโหลดรายงานได้</p>";
+    }
+  }
+});
