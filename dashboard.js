@@ -1,5 +1,6 @@
+
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
+document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
 
   const SHEET_URL = {
     DATA: "https://script.google.com/macros/s/AKfycbwDe2HZtpPi6aWVOGLpq5GbWv0YvgJpuK7VEVi9ZlkdXWDZl0Y-kOM8x6euvWq3F8IB/exec?sheet=DATA",
@@ -70,13 +71,13 @@ document.addEventListener("DOMContentLoaded", () => {
   function logout(){ localStorage.removeItem("username"); window.location.href="login.html"; }
 
   window.loadData = async function(sheet,edit=false){
-    try{
+    try {
       const res = await fetch(SHEET_URL[sheet]);
-      if(!res.ok) throw new Error("HTTP error "+res.status);
       const data = await res.json();
-      if(!Array.isArray(data) || data.length===0){
-        formContent.innerHTML="<p>ไม่พบข้อมูล</p>";
-        return;
+
+      if(!Array.isArray(data)||data.length===0){ 
+        formContent.innerHTML="<p>ไม่พบข้อมูล</p>"; 
+        return; 
       }
 
       let table="<table><tr>";
@@ -90,68 +91,58 @@ document.addEventListener("DOMContentLoaded", () => {
         if(edit) table+=`<td><button onclick="editItem(${i})">แก้ไข</button></td>`;
         table+="</tr>";
       });
+
       table+="</table>";
       formContent.innerHTML=table;
 
-    }catch(err){
+    } catch(err){
       console.error(err);
-      formContent.innerHTML="<p style='color:red;'>ไม่สามารถโหลดข้อมูลได้</p>";
+      formContent.innerHTML="<p style='color:red;'>ไม่สามารถโหลดข้อมูล JSON ได้</p>";
     }
   }
 
   window.saveData = async function(){
-    const code = document.getElementById("code").value.trim();
-    const name = document.getElementById("name").value.trim();
-    if(!code || !name){ alert("กรุณากรอกข้อมูลให้ครบ"); return; }
+    const code=document.getElementById("code").value.trim();
+    const name=document.getElementById("name").value.trim();
+    if(!code||!name){ alert("กรุณากรอกข้อมูลให้ครบ"); return; }
 
-    try{
+    try {
       const res = await fetch(SHEET_URL.DATA,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({"รหัสครุภัณฑ์":code,"ชื่อครุภัณฑ์":name})
+        body:JSON.stringify({"รหัสครุภัณฑ์":code,"ชื่อครุภัณฑ์":name})
       });
       const result = await res.json();
       if(result.status==="success"){
         alert("บันทึกสำเร็จ");
         closeForm();
-      } else {
-        alert("เกิดข้อผิดพลาดในการบันทึก");
       }
-    }catch(err){
+    } catch(err){
       console.error(err);
       alert("เกิดข้อผิดพลาดในการบันทึก");
     }
   }
 
-  window.editItem = function(index){
-    alert("สามารถต่อยอดแก้ไขรายการที่ index: "+index+" ได้ที่นี่");
-  }
+  window.editItem = function(index){ alert("สามารถต่อยอดแก้ไขรายการที่ index: "+index+" ได้ที่นี่"); }
 
   window.loadReport = async function(){
-    const month = document.getElementById("month").value;
+    const month=document.getElementById("month").value;
     if(!month){ alert("กรุณาเลือกเดือน"); return; }
-    const reportDiv = document.getElementById("report-result");
+    const reportDiv=document.getElementById("report-result");
     reportDiv.innerHTML="<p>กำลังโหลดรายงาน...</p>";
 
-    try{
+    try {
       const res = await fetch(SHEET_URL.SHOW+"&month="+month);
-      if(!res.ok) throw new Error("HTTP error "+res.status);
       const data = await res.json();
-      if(!Array.isArray(data) || data.length===0){
-        reportDiv.innerHTML="<p>ไม่พบข้อมูลรายงาน</p>";
-        return;
-      }
+      if(!Array.isArray(data)||data.length===0){ reportDiv.innerHTML="<p>ไม่พบข้อมูลรายงาน</p>"; return; }
 
       let table="<table><tr>";
       Object.keys(data[0]).forEach(k=>table+=`<th>${k}</th>`);
       table+="</tr>";
-      data.forEach(row=>{
-        table+="<tr>"+Object.values(row).map(v=>`<td>${v}</td>`).join("")+"</tr>";
-      });
+      data.forEach(row=>{ table+="<tr>"+Object.values(row).map(v=>`<td>${v}</td>`).join("")+"</tr>"; });
       table+="</table>";
       reportDiv.innerHTML=table;
-
-    }catch(err){
+    } catch(err){
       console.error(err);
       reportDiv.innerHTML="<p style='color:red;'>ไม่สามารถโหลดรายงานได้</p>";
     }
