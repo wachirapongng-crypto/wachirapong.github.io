@@ -1,10 +1,10 @@
 document.getElementById("username").textContent = localStorage.getItem("username") || "Admin";
 
 const SHEET_URL = {
-  DATA: "https://script.google.com/macros/s/AKfycbytRB27aW7mdMrG8_hcGTMmfO-WqXGomdDGxBPYt1f9I17pTJZCzC57WxriJEWxrnw3/exec?sheet=DATA",
-  WAIT: "https://script.google.com/macros/s/AKfycbytRB27aW7mdMrG8_hcGTMmfO-WqXGomdDGxBPYt1f9I17pTJZCzC57WxriJEWxrnw3/exec?sheet=WAIT",
-  SHOW: "https://script.google.com/macros/s/AKfycbytRB27aW7mdMrG8_hcGTMmfO-WqXGomdDGxBPYt1f9I17pTJZCzC57WxriJEWxrnw3/exec?sheet=SHOW",
-  LOGIN: "https://script.google.com/macros/s/AKfycbytRB27aW7mdMrG8_hcGTMmfO-WqXGomdDGxBPYt1f9I17pTJZCzC57WxriJEWxrnw3/exec?sheet=LOGIN"
+  DATA: "https://script.google.com/macros/s/AKfycbzSXs-erVELEXdpTVxswSnyt6XZavuoSyhv8xkNnRsUeVbxd2M1nVMHRw-54TpXNSEO/exec?sheet=DATA",
+  WAIT: "https://script.google.com/macros/s/AKfycbzSXs-erVELEXdpTVxswSnyt6XZavuoSyhv8xkNnRsUeVbxd2M1nVMHRw-54TpXNSEO/exec?sheet=WAIT",
+  SHOW: "https://script.google.com/macros/s/AKfycbzSXs-erVELEXdpTVxswSnyt6XZavuoSyhv8xkNnRsUeVbxd2M1nVMHRw-54TpXNSEO/exec?sheet=SHOW",
+  LOGIN: "https://script.google.com/macros/s/AKfycbzSXs-erVELEXdpTVxswSnyt6XZavuoSyhv8xkNnRsUeVbxd2M1nVMHRw-54TpXNSEO/exec?sheet=LOGIN"
 };
 
 const formSection = document.getElementById("form-section");
