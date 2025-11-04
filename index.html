@@ -82,9 +82,11 @@
       background: white;
       border-radius: 12px;
       padding: 20px;
-      max-width: 800px;
-      margin: 5% auto;
+      max-width: 900px;
+      margin: 3% auto;
       position: relative;
+      overflow-y: auto;
+      max-height: 90vh;
     }
 
     .close {
@@ -98,8 +100,30 @@
 
     .close:hover { color: #0a3d62; }
 
-    .modal-content table th {
+    .modal-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .modal-content th, .modal-content td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    .modal-content th {
       background: #0a3d62;
+      color: white;
+    }
+
+    .section-title {
+      margin-top: 20px;
+      background: #0a3d62;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 6px;
+      display: inline-block;
     }
   </style>
 </head>
@@ -154,6 +178,26 @@
       return JSON.parse(match[1]);
     }
 
+    function formatDate(raw) {
+      if (!raw) return "-";
+      if (raw.startsWith("Date(")) {
+        const parts = raw.match(/\d+/g);
+        const d = new Date(parts[0], parts[1]-1, parts[2]);
+        return d.toLocaleDateString("th-TH");
+      }
+      return raw;
+    }
+
+    function formatTime(raw) {
+      if (!raw) return "-";
+      if (raw.startsWith("Date(")) {
+        const parts = raw.match(/\d+/g);
+        const d = new Date(parts[0], parts[1]-1, parts[2], parts[3], parts[4]);
+        return d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+      }
+      return raw;
+    }
+
     async function loadEquipment() {
       try {
         const res = await fetch(baseURL);
@@ -183,23 +227,53 @@
           <td>${d.name}</td>
           <td>${d.location}</td>
           <td>${d.status}</td>
-          <td><button class="detail-btn" onclick="showDetail(${i})">ดูเพิ่มเติม</button></td>
+          <td><button class="detail-btn" onclick="showDetail('${d.code}')">ดูเพิ่มเติม</button></td>
         </tr>
       `).join("");
     }
 
-    function showDetail(i) {
-      const d = data[i];
+    function showDetail(code) {
+      const related = data.filter(d => d.code === code);
+      const main = related[0];
+      if (!main) return;
+
       modalBody.innerHTML = `
+        <h4 class="section-title">ข้อมูลหลัก</h4>
         <table>
-          <tr><th>รหัส</th><td>${d.code}</td></tr>
-          <tr><th>ชื่อครุภัณฑ์</th><td>${d.name}</td></tr>
-          <tr><th>ที่เก็บ</th><td>${d.location}</td></tr>
-          <tr><th>สถานะ</th><td>${d.status}</td></tr>
-          <tr><th>รายละเอียดเพิ่มเติม</th><td>${d.detail}</td></tr>
-          <tr><th>หมวด</th><td>${d.category}</td></tr>
-          <tr><th>วันที่</th><td>${d.date}</td></tr>
-          <tr><th>เวลา</th><td>${d.time}</td></tr>
+          <tr><th>รหัส</th><td>${main.code}</td></tr>
+          <tr><th>ชื่อครุภัณฑ์</th><td>${main.name}</td></tr>
+          <tr><th>ที่เก็บ</th><td>${main.location}</td></tr>
+          <tr><th>สถานะ</th><td>${main.status}</td></tr>
+          <tr><th>รายละเอียดเพิ่มเติม</th><td>${main.detail}</td></tr>
+          <tr><th>หมวด</th><td>${main.category}</td></tr>
+        </table>
+
+        <h4 class="section-title">ประวัติการตรวจสอบ</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>วันที่</th>
+              <th>เวลา</th>
+              <th>ชื่อครุภัณฑ์</th>
+              <th>ที่เก็บ</th>
+              <th>สถานะ</th>
+              <th>รายละเอียดเพิ่มเติม</th>
+              <th>หมวด</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${related.map(r => `
+              <tr>
+                <td>${formatDate(r.date)}</td>
+                <td>${formatTime(r.time)}</td>
+                <td>${r.name}</td>
+                <td>${r.location}</td>
+                <td>${r.status}</td>
+                <td>${r.detail}</td>
+                <td>${r.category}</td>
+              </tr>
+            `).join("")}
+          </tbody>
         </table>
       `;
       modal.style.display = "block";
