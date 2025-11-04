@@ -41,7 +41,61 @@
       <div class="debug" id="debugBox" style="display:none;"></div>
     </section>
   </main>
+ <!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระบบตรวจสอบครุภัณฑ์</title>
+  <link rel="stylesheet" href="index.css" />
+</head>
 
+<body>
+  <header>
+    <div class="logo">LOGO</div>
+    <h1>ระบบตรวจสอบครุภัณฑ์</h1>
+    <div class="header-actions">
+      <input type="text" id="searchInput" placeholder="ค้นหา..." class="search-input" />
+      <a href="login.html" class="login-btn">LOGIN</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="table-section">
+      <div class="table-header">
+        <h2>รายการครุภัณฑ์</h2>
+      </div>
+
+      <div id="errorBox"></div>
+
+      <table id="equipmentTable">
+        <thead>
+          <tr>
+            <th>รหัสครุภัณฑ์</th>
+            <th>ชื่อ</th>
+            <th>ที่อยู่</th>
+            <th>สถานะ</th>
+            <th>ดูรายละเอียด</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="debug" id="debugBox" style="display:none;"></div>
+    </section>
+  </main>
+
+  <!-- Modal -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <span id="closeModal" class="close">&times;</span>
+      <div id="modalDetails"></div>
+    </div>
+  </div>
+
+  <script src="./scripts/Show.js"></script>
+</body>
+</html>
   <script src="./scripts/Show.js"></script>
 </body>
 </html>
