@@ -6,291 +6,198 @@
   <title>ระบบตรวจสอบครุภัณฑ์</title>
   <style>
     body {
-      font-family: "Prompt", sans-serif;
-      background: #f4f6f8;
+      font-family: "Sarabun", sans-serif;
       margin: 0;
+      background-color: #f4f4f4;
     }
 
     header {
-      background: #0a3d62;
-      color: white;
+      background-color: #004c97;
+      color: #fff;
       padding: 15px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    header h1 { margin: 0; font-size: 1.3em; }
-
-    .search-input {
-      padding: 5px 10px;
-      border-radius: 6px;
-      border: none;
-      outline: none;
-    }
-
-    main {
-      width: 90%;
-      margin: 25px auto;
-      background: white;
-      border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      font-size: 22px;
+      font-weight: bold;
     }
 
     table {
-      width: 100%;
+      width: 95%;
+      margin: 20px auto;
       border-collapse: collapse;
-      margin-top: 10px;
+      background: white;
     }
 
     th, td {
+      border: 1px solid #ddd;
       padding: 10px;
-      border-bottom: 1px solid #eee;
-      text-align: left;
+      text-align: center;
     }
 
     th {
-      background: #3c6382;
-      color: white;
+      background-color: #f0f0f0;
     }
 
-    tr:hover { background: #eef5f9; }
-
-    .detail-btn {
-      background: #0a3d62;
-      color: white;
-      border: none;
-      padding: 6px 10px;
-      border-radius: 6px;
+    button {
+      padding: 6px 12px;
       cursor: pointer;
     }
-
-    .detail-btn:hover { background: #3c6382; }
 
     /* Modal */
     .modal {
       display: none;
       position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.4);
       z-index: 10;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.5);
     }
 
     .modal-content {
-      background: white;
-      border-radius: 12px;
+      background-color: #fff;
+      margin: 5% auto;
       padding: 20px;
-      max-width: 900px;
-      margin: 3% auto;
-      position: relative;
+      border-radius: 8px;
+      width: 80%;
+      max-height: 80vh;
       overflow-y: auto;
-      max-height: 90vh;
     }
 
     .close {
-      position: absolute;
-      top: 10px;
-      right: 15px;
+      color: red;
+      float: right;
       font-size: 24px;
+      font-weight: bold;
       cursor: pointer;
-      color: #777;
     }
 
-    .close:hover { color: #0a3d62; }
+    .detail-header {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
 
-    .modal-content table {
+    .sub-table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
     }
 
-    .modal-content th, .modal-content td {
-      padding: 8px;
-      border: 1px solid #ddd;
-      text-align: left;
+    .sub-table th, .sub-table td {
+      border: 1px solid #ccc;
+      padding: 6px;
+      text-align: center;
     }
 
-    .modal-content th {
-      background: #0a3d62;
-      color: white;
-    }
-
-    .section-title {
-      margin-top: 20px;
-      background: #0a3d62;
-      color: white;
-      padding: 6px 10px;
-      border-radius: 6px;
-      display: inline-block;
+    .sub-table th {
+      background: #eee;
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>ระบบตรวจสอบครุภัณฑ์</h1>
-    <input type="text" id="searchInput" class="search-input" placeholder="ค้นหา..." />
-  </header>
+  <header>ระบบตรวจสอบครุภัณฑ์</header>
 
-  <main>
-    <h2>รายการครุภัณฑ์</h2>
-    <div id="errorBox" style="color:red;"></div>
-    <table id="equipmentTable">
-      <thead>
-        <tr>
-          <th>รหัสครุภัณฑ์</th>
-          <th>ชื่อครุภัณฑ์</th>
-          <th>ที่เก็บ</th>
-          <th>สถานะ</th>
-          <th>เพิ่มเติม</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </main>
+  <table id="assetTable">
+    <thead>
+      <tr>
+        <th>รหัส</th>
+        <th>ชื่อครุภัณฑ์</th>
+        <th>ที่เก็บ</th>
+        <th>สถานะ</th>
+        <th>เพิ่มเติม</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>EQ001</td>
+        <td>พัดลมตั้งพื้น</td>
+        <td>ห้องพักครู</td>
+        <td>ใช้งานได้</td>
+        <td><button class="viewDetail" data-id="EQ001">ดูเพิ่มเติม</button></td>
+      </tr>
+      <tr>
+        <td>EQ002</td>
+        <td>โปรเจคเตอร์ Epson</td>
+        <td>ห้องเรียน 3</td>
+        <td>ชำรุด</td>
+        <td><button class="viewDetail" data-id="EQ002">ดูเพิ่มเติม</button></td>
+      </tr>
+    </tbody>
+  </table>
 
   <!-- Modal -->
-  <div id="modal" class="modal">
+  <div id="detailModal" class="modal">
     <div class="modal-content">
-      <span id="closeModal" class="close">&times;</span>
-      <h3>รายละเอียดครุภัณฑ์</h3>
-      <div id="modalBody">กำลังโหลดข้อมูล...</div>
+      <span class="close">&times;</span>
+      <div id="detailContent"></div>
     </div>
   </div>
 
   <script>
-    const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
-    const sheetName = "SHOW";
-    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
+    const modal = document.getElementById("detailModal");
+    const detailContent = document.getElementById("detailContent");
+    const span = document.getElementsByClassName("close")[0];
 
-    const tbody = document.querySelector("#equipmentTable tbody");
-    const searchInput = document.getElementById("searchInput");
-    const modal = document.getElementById("modal");
-    const closeModal = document.getElementById("closeModal");
-    const modalBody = document.getElementById("modalBody");
-    const errorBox = document.getElementById("errorBox");
-    let data = [];
-
-    function parseGviz(text) {
-      const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);/);
-      if (!match) throw new Error("ไม่พบข้อมูลจากชีต");
-      return JSON.parse(match[1]);
-    }
-
-    function formatDate(raw) {
-      if (!raw) return "-";
-      if (raw.startsWith("Date(")) {
-        const parts = raw.match(/\d+/g);
-        const d = new Date(parts[0], parts[1]-1, parts[2]);
-        return d.toLocaleDateString("th-TH");
+    const data = {
+      EQ001: {
+        code: "EQ001",
+        name: "พัดลมตั้งพื้น",
+        category: "พัดลม",
+        details: [
+          ["2025-09-12", "10:30", "พัดลมตั้งพื้น", "ห้องพักครู", "ใช้งานได้", "พัดลม Hatari 16 นิ้ว", "พัดลม"],
+          ["2025-09-06", "15:30", "พัดลมตั้งพื้น", "ห้องเรียน 3", "ใช้งานได้", "ไม่มีรอยขีดข่วน", "พัดลม"],
+          ["2025-09-04", "17:30", "พัดลมตั้งพื้น", "ห้องเรียน 1", "ชำรุด", "HDD เสีย รอเปลี่ยน", "พัดลม"]
+        ]
+      },
+      EQ002: {
+        code: "EQ002",
+        name: "โปรเจคเตอร์ Epson",
+        category: "เครื่องฉาย",
+        details: [
+          ["2025-09-10", "09:00", "โปรเจคเตอร์ Epson", "ห้องเรียน 2", "ใช้งานได้", "ภาพชัดเจน", "เครื่องฉาย"],
+          ["2025-09-05", "14:00", "โปรเจคเตอร์ Epson", "ห้องประชุม", "ชำรุด", "หลอดไฟหมด", "เครื่องฉาย"]
+        ]
       }
-      return raw;
-    }
+    };
 
-    function formatTime(raw) {
-      if (!raw) return "-";
-      if (raw.startsWith("Date(")) {
-        const parts = raw.match(/\d+/g);
-        const d = new Date(parts[0], parts[1]-1, parts[2], parts[3], parts[4]);
-        return d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
-      }
-      return raw;
-    }
+    document.querySelectorAll(".viewDetail").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-id");
+        const asset = data[id];
+        if (!asset) return;
 
-    async function loadEquipment() {
-      try {
-        const res = await fetch(baseURL);
-        const text = await res.text();
-        const json = parseGviz(text);
-        data = json.table.rows.map(r => ({
-          code: r.c[0]?.v ?? "",
-          name: r.c[1]?.v ?? "",
-          location: r.c[2]?.v ?? "",
-          status: r.c[3]?.v ?? "",
-          detail: r.c[4]?.v ?? "",
-          category: r.c[5]?.v ?? "",
-          date: r.c[6]?.v ?? "",
-          time: r.c[7]?.v ?? ""
-        })).filter(d => d.code);
-        renderTable(data);
-      } catch (err) {
-        errorBox.textContent = "❌ โหลดข้อมูลไม่สำเร็จ: " + err.message;
-        console.error(err);
-      }
-    }
-
-    function renderTable(list) {
-      tbody.innerHTML = list.map((d, i) => `
-        <tr>
-          <td>${d.code}</td>
-          <td>${d.name}</td>
-          <td>${d.location}</td>
-          <td>${d.status}</td>
-          <td><button class="detail-btn" onclick="showDetail('${d.code}')">ดูเพิ่มเติม</button></td>
-        </tr>
-      `).join("");
-    }
-
-    function showDetail(code) {
-      const related = data.filter(d => d.code === code);
-      const main = related[0];
-      if (!main) return;
-
-      modalBody.innerHTML = `
-        <h4 class="section-title">ข้อมูลหลัก</h4>
-        <table>
-          <tr><th>รหัส</th><td>${main.code}</td></tr>
-          <tr><th>ชื่อครุภัณฑ์</th><td>${main.name}</td></tr>
-          <tr><th>ที่เก็บ</th><td>${main.location}</td></tr>
-          <tr><th>สถานะ</th><td>${main.status}</td></tr>
-          <tr><th>รายละเอียดเพิ่มเติม</th><td>${main.detail}</td></tr>
-          <tr><th>หมวด</th><td>${main.category}</td></tr>
-        </table>
-
-        <h4 class="section-title">ประวัติการตรวจสอบ</h4>
-        <table>
-          <thead>
-            <tr>
-              <th>วันที่</th>
-              <th>เวลา</th>
-              <th>ชื่อครุภัณฑ์</th>
-              <th>ที่เก็บ</th>
-              <th>สถานะ</th>
-              <th>รายละเอียดเพิ่มเติม</th>
-              <th>หมวด</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${related.map(r => `
+        let html = `
+          <div class="detail-header">รหัส: ${asset.code}</div>
+          <div class="detail-header">ชื่อ: ${asset.name}</div>
+          <div class="detail-header">หมวด: ${asset.category}</div>
+          <table class="sub-table">
+            <thead>
               <tr>
-                <td>${formatDate(r.date)}</td>
-                <td>${formatTime(r.time)}</td>
-                <td>${r.name}</td>
-                <td>${r.location}</td>
-                <td>${r.status}</td>
-                <td>${r.detail}</td>
-                <td>${r.category}</td>
+                <th>วันที่</th>
+                <th>เวลา</th>
+                <th>ชื่อครุภัณฑ์</th>
+                <th>ที่เก็บ</th>
+                <th>สถานะ</th>
+                <th>รายละเอียดเพิ่มเติม</th>
+                <th>หมวด</th>
               </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      `;
-      modal.style.display = "block";
-    }
+            </thead>
+            <tbody>
+              ${asset.details.map(row => `
+                <tr>
+                  ${row.map(col => `<td>${col}</td>`).join('')}
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        `;
 
-    closeModal.onclick = () => (modal.style.display = "none");
-    window.onclick = e => { if (e.target == modal) modal.style.display = "none"; };
-
-    searchInput.addEventListener("input", e => {
-      const keyword = e.target.value.toLowerCase();
-      const filtered = data.filter(d =>
-        Object.values(d).some(v => (v || "").toLowerCase().includes(keyword))
-      );
-      renderTable(filtered);
+        detailContent.innerHTML = html;
+        modal.style.display = "block";
+      });
     });
 
-    loadEquipment();
+    span.onclick = () => modal.style.display = "none";
+    window.onclick = e => { if (e.target == modal) modal.style.display = "none"; };
   </script>
 </body>
 </html>
