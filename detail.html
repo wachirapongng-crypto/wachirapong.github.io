@@ -36,29 +36,31 @@
         const json = JSON.parse(text.substr(47).slice(0, -2));
         const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : "")));
 
-        // สมมติคอลัมน์ในชีต: [วันที่, เวลา, รหัส, ชื่อ, หมวด, ที่จัดเก็บ, สถานะ, บันทึกโดย]
-        const logs = rows.filter(r => r[2] == id);
+        // คอลัมน์: [รหัส, ชื่อ, ที่เก็บ, สถานะ, รายละเอียดเพิ่มเติม, หมวด, วันที่, เวลา]
+        const logs = rows.filter(r => r[0] == id);
 
         if (logs.length > 0) {
           const first = logs[0];
-          const assetCode = first[2] || "-";
-          const assetName = first[3] || "-";
-          const category = first[4] || "-";
+          const assetCode = first[0] || "-";
+          const assetName = first[1] || "-";
+          const category = first[5] || "-";
 
           const tableRows = logs.map(r => `
             <tr>
-              <td>${r[0] || "-"}</td>
-              <td>${r[1] || "-"}</td>
-              <td>${r[5] || "-"}</td>
               <td>${r[6] || "-"}</td>
               <td>${r[7] || "-"}</td>
+              <td>${r[1] || "-"}</td>
+              <td>${r[2] || "-"}</td>
+              <td>${r[3] || "-"}</td>
+              <td>${r[4] || "-"}</td>
+              <td>${r[5] || "-"}</td>
             </tr>
           `).join("");
 
           document.getElementById("detail").innerHTML = `
             <div class="asset-info">
               <p><strong>รหัสครุภัณฑ์:</strong> ${assetCode}</p>
-              <p><strong>ชื่อ:</strong> ${assetName}</p>
+              <p><strong>ชื่อครุภัณฑ์:</strong> ${assetName}</p>
               <p><strong>หมวด:</strong> ${category}</p>
             </div>
             <div class="asset-table">
@@ -66,11 +68,13 @@
               <table>
                 <thead>
                   <tr>
-                    <th>วันที่ (01/01/2568)</th>
-                    <th>เวลา (09:30)</th>
-                    <th>ที่จัดเก็บ</th>
+                    <th>วันที่</th>
+                    <th>เวลา</th>
+                    <th>ชื่อครุภัณฑ์</th>
+                    <th>ที่เก็บ</th>
                     <th>สถานะ</th>
-                    <th>บันทึกโดย</th>
+                    <th>รายละเอียดเพิ่มเติม</th>
+                    <th>หมวด</th>
                   </tr>
                 </thead>
                 <tbody>
