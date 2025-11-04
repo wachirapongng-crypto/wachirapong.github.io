@@ -36,32 +36,48 @@
         const json = JSON.parse(text.substr(47).slice(0, -2));
         const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : "")));
 
-        // สมมติคอลัมน์ในชีต: [วันที่, รหัส, ชื่อ, ที่เก็บ, สถานะ, หมายเหตุ]
-        const item = rows.find(r => r[1] == id);
+        // สมมติคอลัมน์ในชีต: [วันที่, เวลา, รหัส, ชื่อ, หมวด, ที่จัดเก็บ, สถานะ, บันทึกโดย]
+        const logs = rows.filter(r => r[2] == id);
 
-        if (item) {
+        if (logs.length > 0) {
+          const first = logs[0];
+          const assetCode = first[2] || "-";
+          const assetName = first[3] || "-";
+          const category = first[4] || "-";
+
+          const tableRows = logs.map(r => `
+            <tr>
+              <td>${r[0] || "-"}</td>
+              <td>${r[1] || "-"}</td>
+              <td>${r[5] || "-"}</td>
+              <td>${r[6] || "-"}</td>
+              <td>${r[7] || "-"}</td>
+            </tr>
+          `).join("");
+
           document.getElementById("detail").innerHTML = `
-            <h2>${item[2] || "ไม่ระบุชื่อครุภัณฑ์"}</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>วันที่</th>
-                  <th>รหัส</th>
-                  <th>ที่เก็บ</th>
-                  <th>สถานะ</th>
-                  <th>หมายเหตุ</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>${item[0] || "-"}</td>
-                  <td>${item[1] || "-"}</td>
-                  <td>${item[3] || "-"}</td>
-                  <td>${item[4] || "-"}</td>
-                  <td>${item[5] || "-"}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="asset-info">
+              <p><strong>รหัสครุภัณฑ์:</strong> ${assetCode}</p>
+              <p><strong>ชื่อ:</strong> ${assetName}</p>
+              <p><strong>หมวด:</strong> ${category}</p>
+            </div>
+            <div class="asset-table">
+              <h3>ประวัติข้อมูล</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>วันที่ (01/01/2568)</th>
+                    <th>เวลา (09:30)</th>
+                    <th>ที่จัดเก็บ</th>
+                    <th>สถานะ</th>
+                    <th>บันทึกโดย</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${tableRows}
+                </tbody>
+              </table>
+            </div>
           `;
         } else {
           document.getElementById("detail").innerHTML = `
