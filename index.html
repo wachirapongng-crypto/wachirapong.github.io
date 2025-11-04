@@ -387,4 +387,13 @@
         (item.code || "").toLowerCase().includes(keyword) ||
         (item.name || "").toLowerCase().includes(keyword) ||
         (item.location || "").toLowerCase().includes(keyword) ||
-        (item.status ||
+        (item.status || "").toLowerCase().includes(keyword)
+      );
+      renderTable(filtered);
+    });
+
+    // เรียกโหลด
+    loadEquipment();
+  </script>
+</body>
+</html>
