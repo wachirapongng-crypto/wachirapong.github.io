@@ -4,125 +4,219 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ระบบตรวจสอบครุภัณฑ์</title>
-  <link rel="stylesheet" href="index.css" />
+  <style>
+    body {
+      font-family: "Prompt", sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+    }
+
+    header {
+      background: #0a3d62;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 { margin: 0; font-size: 1.3em; }
+
+    .search-input {
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: none;
+      outline: none;
+    }
+
+    main {
+      width: 90%;
+      margin: 25px auto;
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      text-align: left;
+    }
+
+    th {
+      background: #3c6382;
+      color: white;
+    }
+
+    tr:hover { background: #eef5f9; }
+
+    .detail-btn {
+      background: #0a3d62;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .detail-btn:hover { background: #3c6382; }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      z-index: 10;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 800px;
+      margin: 5% auto;
+      position: relative;
+    }
+
+    .close {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 24px;
+      cursor: pointer;
+      color: #777;
+    }
+
+    .close:hover { color: #0a3d62; }
+
+    .modal-content table th {
+      background: #0a3d62;
+    }
+  </style>
 </head>
 <body>
   <header>
     <h1>ระบบตรวจสอบครุภัณฑ์</h1>
+    <input type="text" id="searchInput" class="search-input" placeholder="ค้นหา..." />
   </header>
 
   <main>
-    <table id="assetTable">
+    <h2>รายการครุภัณฑ์</h2>
+    <div id="errorBox" style="color:red;"></div>
+    <table id="equipmentTable">
       <thead>
         <tr>
-          <th>รหัส</th>
+          <th>รหัสครุภัณฑ์</th>
           <th>ชื่อครุภัณฑ์</th>
           <th>ที่เก็บ</th>
           <th>สถานะ</th>
           <th>เพิ่มเติม</th>
         </tr>
       </thead>
-      <tbody id="assetBody"></tbody>
+      <tbody></tbody>
     </table>
   </main>
 
-  <!-- modal แสดงหน้าเต็ม -->
-  <div id="detailModal" class="modal">
+  <!-- Modal -->
+  <div id="modal" class="modal">
     <div class="modal-content">
-      <span class="close-btn" onclick="closeModal()">&times;</span>
+      <span id="closeModal" class="close">&times;</span>
+      <h3>รายละเอียดครุภัณฑ์</h3>
       <div id="modalBody">กำลังโหลดข้อมูล...</div>
     </div>
   </div>
 
   <script>
     const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
-    const sheetName = "LOG";
+    const sheetName = "SHOW";
     const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
 
-    // โหลดข้อมูลสรุป
-    async function loadAssets() {
-      const res = await fetch(baseURL);
-      const text = await res.text();
-      const json = JSON.parse(text.substr(47).slice(0, -2));
-      const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : "")));
+    const tbody = document.querySelector("#equipmentTable tbody");
+    const searchInput = document.getElementById("searchInput");
+    const modal = document.getElementById("modal");
+    const closeModal = document.getElementById("closeModal");
+    const modalBody = document.getElementById("modalBody");
+    const errorBox = document.getElementById("errorBox");
+    let data = [];
 
-      const tbody = document.getElementById("assetBody");
-      tbody.innerHTML = rows
-        .map(r => `
-          <tr>
-            <td>${r[0]}</td>
-            <td>${r[1]}</td>
-            <td>${r[2]}</td>
-            <td>${r[3]}</td>
-            <td><button onclick="openFullDetail('${r[0]}')">ดูเพิ่มเติม</button></td>
-          </tr>
-        `)
-        .join("");
+    function parseGviz(text) {
+      const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);/);
+      if (!match) throw new Error("ไม่พบข้อมูลจากชีต");
+      return JSON.parse(match[1]);
     }
 
-    // ย้ายฟังก์ชันหน้าเต็มมาอยู่ในนี้
-    async function openFullDetail(id) {
-      const modal = document.getElementById("detailModal");
-      const modalBody = document.getElementById("modalBody");
-      modal.style.display = "block";
-      modalBody.innerHTML = "กำลังโหลดข้อมูล...";
-
+    async function loadEquipment() {
       try {
         const res = await fetch(baseURL);
         const text = await res.text();
-        const json = JSON.parse(text.substr(47).slice(0, -2));
-        const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : "")));
-        const logs = rows.filter(r => r[0] == id);
-
-        if (logs.length > 0) {
-          const first = logs[0];
-          const tableRows = logs.map(r => `
-            <tr>
-              <td>${r[6] || "-"}</td>
-              <td>${r[7] || "-"}</td>
-              <td>${r[1] || "-"}</td>
-              <td>${r[2] || "-"}</td>
-              <td>${r[3] || "-"}</td>
-              <td>${r[4] || "-"}</td>
-              <td>${r[5] || "-"}</td>
-            </tr>
-          `).join("");
-
-          modalBody.innerHTML = `
-            <div class="asset-info">
-              <p><strong>รหัส:</strong> ${first[0]}</p>
-              <p><strong>ชื่อ:</strong> ${first[1]}</p>
-              <p><strong>หมวด:</strong> ${first[5]}</p>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>วันที่</th>
-                  <th>เวลา</th>
-                  <th>ชื่อครุภัณฑ์</th>
-                  <th>ที่เก็บ</th>
-                  <th>สถานะ</th>
-                  <th>รายละเอียดเพิ่มเติม</th>
-                  <th>หมวด</th>
-                </tr>
-              </thead>
-              <tbody>${tableRows}</tbody>
-            </table>
-          `;
-        } else {
-          modalBody.innerHTML = `<p>ไม่พบข้อมูลของรหัส ${id}</p>`;
-        }
+        const json = parseGviz(text);
+        data = json.table.rows.map(r => ({
+          code: r.c[0]?.v ?? "",
+          name: r.c[1]?.v ?? "",
+          location: r.c[2]?.v ?? "",
+          status: r.c[3]?.v ?? "",
+          detail: r.c[4]?.v ?? "",
+          category: r.c[5]?.v ?? "",
+          date: r.c[6]?.v ?? "",
+          time: r.c[7]?.v ?? ""
+        })).filter(d => d.code);
+        renderTable(data);
       } catch (err) {
-        modalBody.innerHTML = `<p>เกิดข้อผิดพลาดในการโหลดข้อมูล</p>`;
+        errorBox.textContent = "❌ โหลดข้อมูลไม่สำเร็จ: " + err.message;
         console.error(err);
       }
     }
 
-    function closeModal() {
-      document.getElementById("detailModal").style.display = "none";
+    function renderTable(list) {
+      tbody.innerHTML = list.map((d, i) => `
+        <tr>
+          <td>${d.code}</td>
+          <td>${d.name}</td>
+          <td>${d.location}</td>
+          <td>${d.status}</td>
+          <td><button class="detail-btn" onclick="showDetail(${i})">ดูเพิ่มเติม</button></td>
+        </tr>
+      `).join("");
     }
 
-    loadAssets();
+    function showDetail(i) {
+      const d = data[i];
+      modalBody.innerHTML = `
+        <table>
+          <tr><th>รหัส</th><td>${d.code}</td></tr>
+          <tr><th>ชื่อครุภัณฑ์</th><td>${d.name}</td></tr>
+          <tr><th>ที่เก็บ</th><td>${d.location}</td></tr>
+          <tr><th>สถานะ</th><td>${d.status}</td></tr>
+          <tr><th>รายละเอียดเพิ่มเติม</th><td>${d.detail}</td></tr>
+          <tr><th>หมวด</th><td>${d.category}</td></tr>
+          <tr><th>วันที่</th><td>${d.date}</td></tr>
+          <tr><th>เวลา</th><td>${d.time}</td></tr>
+        </table>
+      `;
+      modal.style.display = "block";
+    }
+
+    closeModal.onclick = () => (modal.style.display = "none");
+    window.onclick = e => { if (e.target == modal) modal.style.display = "none"; };
+
+    searchInput.addEventListener("input", e => {
+      const keyword = e.target.value.toLowerCase();
+      const filtered = data.filter(d =>
+        Object.values(d).some(v => (v || "").toLowerCase().includes(keyword))
+      );
+      renderTable(filtered);
+    });
+
+    loadEquipment();
   </script>
 </body>
 </html>
