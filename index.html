@@ -5,395 +5,124 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ระบบตรวจสอบครุภัณฑ์</title>
   <link rel="stylesheet" href="index.css" />
-  <style>
-    /* ===== 🌈 โทนสีหลัก ===== */
-    :root {
-      --main-blue: #0a3d62;
-      --accent-blue: #3c6382;
-      --light-blue: #82ccdd;
-      --light-gray: #f4f6f8;
-      --white: #ffffff;
-    }
-
-    body {
-      font-family: "Prompt", sans-serif;
-      margin: 0;
-      background: var(--light-gray);
-      color: #333;
-    }
-
-    /* ===== Header ===== */
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: var(--main-blue);
-      color: var(--white);
-      padding: 12px 20px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .logo {
-      font-weight: bold;
-      font-size: 1.2em;
-    }
-
-    h1 {
-      font-size: 1.3em;
-      margin: 0;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .search-input {
-      padding: 6px 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .search-input:focus {
-      border-color: var(--light-blue);
-    }
-
-    .login-btn {
-      background: var(--white);
-      color: var(--main-blue);
-      padding: 6px 14px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: bold;
-      transition: background 0.2s;
-    }
-
-    .login-btn:hover {
-      background: var(--light-blue);
-      color: var(--white);
-    }
-
-    /* ===== ตาราง ===== */
-    .table-section {
-      margin: 30px auto;
-      background: var(--white);
-      border-radius: 12px;
-      padding: 20px;
-      width: 90%;
-      max-width: 1000px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    .table-header h2 {
-      color: var(--main-blue);
-      margin-bottom: 10px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    th {
-      background: var(--accent-blue);
-      color: var(--white);
-      text-align: left;
-      padding: 10px;
-      font-weight: 500;
-    }
-
-    td {
-      padding: 10px;
-      border-bottom: 1px solid #eee;
-    }
-
-    tr:nth-child(even) {
-      background: #f9fbfc;
-    }
-
-    tr:hover {
-      background: #eef5f9;
-    }
-
-    .detail-btn {
-      background: var(--main-blue);
-      color: var(--white);
-      border: none;
-      padding: 6px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 0.9em;
-      transition: background 0.2s;
-    }
-
-    .detail-btn:hover {
-      background: var(--accent-blue);
-    }
-
-    /* ===== Modal ===== */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 10;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background: rgba(0, 0, 0, 0.4);
-    }
-
-    .modal-content {
-      background: var(--white);
-      margin: 8% auto;
-      padding: 20px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 600px;
-      position: relative;
-      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    .modal-content h3 {
-      color: var(--main-blue);
-      margin-top: 0;
-    }
-
-    .close {
-      position: absolute;
-      right: 15px;
-      top: 10px;
-      cursor: pointer;
-      font-size: 22px;
-      color: #777;
-      transition: color 0.2s;
-    }
-
-    .close:hover {
-      color: var(--accent-blue);
-    }
-
-    #errorBox {
-      color: red;
-      margin: 10px 0;
-      text-align: center;
-      font-weight: bold;
-    }
-
-    .debug {
-      margin-top: 10px;
-      font-size: 12px;
-      color: #666;
-      background: #fff;
-      padding: 8px;
-      border-radius: 6px;
-      max-height: 120px;
-      overflow: auto;
-    }
-  </style>
 </head>
-
 <body>
   <header>
-    <div class="logo">LOGO</div>
     <h1>ระบบตรวจสอบครุภัณฑ์</h1>
-    <div class="header-actions">
-      <input type="text" id="searchInput" placeholder="ค้นหา..." class="search-input" />
-      <a href="login.html" class="login-btn">LOGIN</a>
-    </div>
   </header>
 
   <main>
-    <section class="table-section">
-      <div class="table-header">
-        <h2>รายการครุภัณฑ์</h2>
-      </div>
-
-      <div id="errorBox"></div>
-
-      <table id="equipmentTable">
-        <thead>
-          <tr>
-            <th>รหัสครุภัณฑ์</th>
-            <th>ชื่อ</th>
-            <th>ที่อยู่</th>
-            <th>สถานะ</th>
-            <th>ดูรายละเอียด</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <div class="debug" id="debugBox" style="display:none;"></div>
-    </section>
+    <table id="assetTable">
+      <thead>
+        <tr>
+          <th>รหัส</th>
+          <th>ชื่อครุภัณฑ์</th>
+          <th>ที่เก็บ</th>
+          <th>สถานะ</th>
+          <th>เพิ่มเติม</th>
+        </tr>
+      </thead>
+      <tbody id="assetBody"></tbody>
+    </table>
   </main>
 
-  <!-- Modal -->
-  <div id="modal" class="modal">
+  <!-- modal แสดงหน้าเต็ม -->
+  <div id="detailModal" class="modal">
     <div class="modal-content">
-      <span id="closeModal" class="close">&times;</span>
-      <div id="modalDetails"></div>
+      <span class="close-btn" onclick="closeModal()">&times;</span>
+      <div id="modalBody">กำลังโหลดข้อมูล...</div>
     </div>
   </div>
 
   <script>
     const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
-    const sheetName = "SHOW";
-    // cache buster
-    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}&t=${Date.now()}`;
+    const sheetName = "LOG";
+    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
 
-    const tableBody = document.querySelector("#equipmentTable tbody");
-    const searchInput = document.getElementById("searchInput");
-    const modal = document.getElementById("modal");
-    const closeModal = document.getElementById("closeModal");
-    const modalDetails = document.getElementById("modalDetails");
-    const errorBox = document.getElementById("errorBox");
-    const debugBox = document.getElementById("debugBox");
+    // โหลดข้อมูลสรุป
+    async function loadAssets() {
+      const res = await fetch(baseURL);
+      const text = await res.text();
+      const json = JSON.parse(text.substr(47).slice(0, -2));
+      const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : "")));
 
-    let data = [];
-
-    // ฟังก์ชัน parse ที่ทนทานต่อรูปแบบ response ของ gviz
-    function parseGviz(text) {
-      // มองหาส่วน JSON ภายใน google.visualization.Query.setResponse(...)
-      const m = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);?/);
-      if (m && m[1]) {
-        return JSON.parse(m[1]);
-      }
-
-      // fallback เก่า (บางครั้ง response ก็เริ่มด้วย /*O_o*/\n)
-      try {
-        const start = text.indexOf("{");
-        const end = text.lastIndexOf("}");
-        if (start !== -1 && end !== -1) {
-          const sub = text.substring(start, end + 1);
-          return JSON.parse(sub);
-        }
-      } catch (e) {
-        // ignore
-      }
-
-      throw new Error("ไม่พบข้อมูล JSON ใน response จาก Google Sheets");
+      const tbody = document.getElementById("assetBody");
+      tbody.innerHTML = rows
+        .map(r => `
+          <tr>
+            <td>${r[0]}</td>
+            <td>${r[1]}</td>
+            <td>${r[2]}</td>
+            <td>${r[3]}</td>
+            <td><button onclick="openFullDetail('${r[0]}')">ดูเพิ่มเติม</button></td>
+          </tr>
+        `)
+        .join("");
     }
 
-    async function loadEquipment() {
+    // ย้ายฟังก์ชันหน้าเต็มมาอยู่ในนี้
+    async function openFullDetail(id) {
+      const modal = document.getElementById("detailModal");
+      const modalBody = document.getElementById("modalBody");
+      modal.style.display = "block";
+      modalBody.innerHTML = "กำลังโหลดข้อมูล...";
+
       try {
         const res = await fetch(baseURL);
         const text = await res.text();
+        const json = JSON.parse(text.substr(47).slice(0, -2));
+        const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : "")));
+        const logs = rows.filter(r => r[0] == id);
 
-        // debug: แสดงตัวอย่าง response บางส่วน ถ้าต้องการเปิดใช้ ให้ debugBox.style.display = "block";
-        debugBox.style.display = "none";
-        debugBox.textContent = text.slice(0, 800);
+        if (logs.length > 0) {
+          const first = logs[0];
+          const tableRows = logs.map(r => `
+            <tr>
+              <td>${r[6] || "-"}</td>
+              <td>${r[7] || "-"}</td>
+              <td>${r[1] || "-"}</td>
+              <td>${r[2] || "-"}</td>
+              <td>${r[3] || "-"}</td>
+              <td>${r[4] || "-"}</td>
+              <td>${r[5] || "-"}</td>
+            </tr>
+          `).join("");
 
-        const json = parseGviz(text);
-
-        // ป้องกันกรณีไม่มี table/rows
-        if (!json.table || !json.table.rows) {
-          throw new Error("รูปแบบข้อมูลจากชีตไม่ถูกต้อง (ไม่มี table.rows)");
+          modalBody.innerHTML = `
+            <div class="asset-info">
+              <p><strong>รหัส:</strong> ${first[0]}</p>
+              <p><strong>ชื่อ:</strong> ${first[1]}</p>
+              <p><strong>หมวด:</strong> ${first[5]}</p>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>วันที่</th>
+                  <th>เวลา</th>
+                  <th>ชื่อครุภัณฑ์</th>
+                  <th>ที่เก็บ</th>
+                  <th>สถานะ</th>
+                  <th>รายละเอียดเพิ่มเติม</th>
+                  <th>หมวด</th>
+                </tr>
+              </thead>
+              <tbody>${tableRows}</tbody>
+            </table>
+          `;
+        } else {
+          modalBody.innerHTML = `<p>ไม่พบข้อมูลของรหัส ${id}</p>`;
         }
-
-        // Map rows -> object (ตรวจสอบแต่ละเซลด้วย r.c[index])
-        data = json.table.rows.map((r, idx) => {
-          // สมมติ header ในชีตเป็น:
-          // col0 = number, col1 = code, col2 = name, col3 = location, col4 = status, col5 = details
-          return {
-            number: r.c[0]?.v ?? "",
-            code: r.c[1]?.v ?? "",
-            name: r.c[2]?.v ?? "",
-            location: r.c[3]?.v ?? "",
-            status: r.c[4]?.v ?? "",
-            details: r.c[5]?.v ?? "",
-            rawRowIndex: idx + 1
-          };
-        });
-
-        // กรองแถวที่มี code ว่าง (ถ้าต้องการแสดงทั้งหมด ให้ลบ filter นี้)
-        data = data.filter(d => d.code !== "" || d.name !== "");
-
-        if (data.length === 0) throw new Error("ไม่พบข้อมูลในชีต SHOW (หรือรูปแบบคอลัมน์ผิด)");
-
-        renderTable();
-        errorBox.textContent = "";
-        console.log("✅ โหลดข้อมูลสำเร็จ:", data.length, "แถว");
-      } catch (error) {
-        console.error("❌ โหลดข้อมูลไม่สำเร็จ:", error);
-        tableBody.innerHTML = `<tr><td colspan="5" style="color:red;">ไม่สามารถโหลดข้อมูลได้</td></tr>`;
-        errorBox.textContent = "❌ " + error.message;
-
-        // เปิด debug box อัตโนมัติ เพื่อช่วยเช็ค response (ถ้าต้องการปิด ให้ลบบรรทัดนี้)
-        debugBox.style.display = "block";
+      } catch (err) {
+        modalBody.innerHTML = `<p>เกิดข้อผิดพลาดในการโหลดข้อมูล</p>`;
+        console.error(err);
       }
     }
 
-    function renderTable(filteredData = data) {
-      tableBody.innerHTML = filteredData
-        .map(
-          (e, index) => `
-          <tr>
-            <td>${escapeHtml(e.code)}</td>
-            <td>${escapeHtml(e.name)}</td>
-            <td>${escapeHtml(e.location)}</td>
-            <td>${escapeHtml(e.status)}</td>
-            <td>
-              <button class="detail-btn" data-index="${index}">ดูเพิ่มเติม</button>
-              <a href="detail.html?id=${encodeURIComponent(e.code)}" style="margin-left:8px; font-size:0.9em;">หน้าเต็ม</a>
-            </td>
-          </tr>
-        `
-        )
-        .join("");
-
-      // เพิ่ม event listener ให้ปุ่มทั้งหมดย้ำ ๆ
-      document.querySelectorAll(".detail-btn").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const i = Number(btn.getAttribute("data-index"));
-          const row = filteredData[i];
-          modalDetails.innerHTML = `
-            <h3>${escapeHtml(row.name || "ไม่ระบุชื่อ")}</h3>
-            <p><strong>รหัส:</strong> ${escapeHtml(row.code || "-")}</p>
-            <p><strong>ที่อยู่:</strong> ${escapeHtml(row.location || "-")}</p>
-            <p><strong>สถานะ:</strong> ${escapeHtml(row.status || "-")}</p>
-            <p><strong>รายละเอียด:</strong> ${escapeHtml(row.details || "-")}</p>
-            <p style="font-size:12px;color:#666;">(แถวที่ ${row.rawRowIndex} ใน response)</p>
-          `;
-          modal.style.display = "block";
-        });
-      });
+    function closeModal() {
+      document.getElementById("detailModal").style.display = "none";
     }
 
-    // ป้องกัน XSS เล็ก ๆ ด้วยการ escape ข้อความก่อนใส่ลง DOM
-    function escapeHtml(str) {
-      if (typeof str !== "string") return str ?? "";
-      return str
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
-    }
-
-    closeModal.onclick = () => (modal.style.display = "none");
-    window.onclick = e => {
-      if (e.target == modal) modal.style.display = "none";
-    };
-
-    searchInput.addEventListener("input", e => {
-      const keyword = e.target.value.trim().toLowerCase();
-      const filtered = data.filter(item =>
-        (item.code || "").toLowerCase().includes(keyword) ||
-        (item.name || "").toLowerCase().includes(keyword) ||
-        (item.location || "").toLowerCase().includes(keyword) ||
-        (item.status || "").toLowerCase().includes(keyword)
-      );
-      renderTable(filtered);
-    });
-
-    // เรียกโหลด
-    loadEquipment();
+    loadAssets();
   </script>
 </body>
 </html>
