@@ -37,88 +37,103 @@
     </div>
   </div>
 
-  <script>
-    const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
-    const sheetName = "SHOW";
-    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
+ <script>
+  const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
+  const sheetName = "SHOW";
+  const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
 
-    const tbody = document.querySelector("#equipmentTable tbody");
-    const searchInput = document.getElementById("searchInput");
-    const modal = document.getElementById("modal");
-    const closeModal = document.getElementById("closeModal");
-    const modalBody = document.getElementById("modalBody");
-    const errorBox = document.getElementById("errorBox");
-    let data = [];
+  const tbody = document.querySelector("#equipmentTable tbody");
+  const searchInput = document.getElementById("searchInput");
+  const modal = document.getElementById("modal");
+  const closeModal = document.getElementById("closeModal");
+  const modalBody = document.getElementById("modalBody");
+  const errorBox = document.getElementById("errorBox");
+  let data = [];
 
-    function parseGviz(text) {
-      const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);/);
-      if (!match) throw new Error("ไม่พบข้อมูลจากชีต");
-      return JSON.parse(match[1]);
-    }
+  function parseGviz(text) {
+    const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);/);
+    if (!match) throw new Error("ไม่พบข้อมูล (GViz Response)");
+    return JSON.parse(match[1]);
+  }
 
-    async function loadEquipment() {
-      try {
-        const res = await fetch(baseURL);
-        const text = await res.text();
-        const json = parseGviz(text);
-        data = json.table.rows.map(r => ({
-          code: r.c[0]?.v ?? "",
-          name: r.c[1]?.v ?? "",
-          location: r.c[2]?.v ?? "",
-          status: r.c[3]?.v ?? "",
-          detail: r.c[4]?.v ?? "",
-          category: r.c[5]?.v ?? "",
-          date: r.c[6]?.v ?? "",
-          time: r.c[7]?.v ?? ""
-        })).filter(d => d.code);
-        renderTable(data);
-      } catch (err) {
-        errorBox.textContent = "❌ โหลดข้อมูลไม่สำเร็จ: " + err.message;
-        console.error(err);
+  async function loadEquipment() {
+    try {
+      const res = await fetch(baseURL);
+
+      if (!res.ok) {
+        throw new Error("HTTP Error: " + res.status);
       }
+
+      const text = await res.text();
+      const json = parseGviz(text);
+
+      if (!json.table.rows) {
+        throw new Error("ข้อมูลไม่มีแถว (rows)");
+      }
+
+      data = json.table.rows.map(r => ({
+        code: r.c[0]?.v || "",
+        name: r.c[1]?.v || "",
+        location: r.c[2]?.v || "",
+        status: r.c[3]?.v || "",
+        detail: r.c[4]?.v || "",
+        category: r.c[5]?.v || "",
+        date: r.c[6]?.v || "",
+        time: r.c[7]?.v || ""
+      })).filter(d => d.code !== "");
+
+      renderTable(data);
+
+    } catch (err) {
+      errorBox.textContent = "❌ โหลดข้อมูลไม่สำเร็จ: " + err.message;
+      console.error(err);
     }
+  }
 
-    function renderTable(list) {
-      tbody.innerHTML = list.map((d, i) => `
-        <tr>
-          <td>${d.code}</td>
-          <td>${d.name}</td>
-          <td>${d.location}</td>
-          <td>${d.status}</td>
-          <td><button class="detail-btn" onclick="showDetail(${i})">ดูเพิ่มเติม</button></td>
-        </tr>
-      `).join("");
-    }
+  function renderTable(list) {
+    tbody.innerHTML = list.map((d, i) => `
+      <tr>
+        <td>${d.code}</td>
+        <td>${d.name}</td>
+        <td>${d.location}</td>
+        <td>${d.status}</td>
+        <td><button onclick="showDetail(${i})">ดูเพิ่มเติม</button></td>
+      </tr>
+    `).join("");
+  }
 
-    function showDetail(i) {
-      const d = data[i];
-      modalBody.innerHTML = `
-        <table>
-          <tr><th>รหัส</th><td>${d.code}</td></tr>
-          <tr><th>ชื่อครุภัณฑ์</th><td>${d.name}</td></tr>
-          <tr><th>ที่เก็บ</th><td>${d.location}</td></tr>
-          <tr><th>สถานะ</th><td>${d.status}</td></tr>
-          <tr><th>รายละเอียดเพิ่มเติม</th><td>${d.detail}</td></tr>
-          <tr><th>หมวด</th><td>${d.category}</td></tr>
-          <tr><th>วันที่</th><td>${d.date}</td></tr>
-          <tr><th>เวลา</th><td>${d.time}</td></tr>
-        </table>
-      `;
-      modal.style.display = "block";
-    }
+  function showDetail(index) {
+    const d = data[index];
+    if (!d) return;
 
-    closeModal.onclick = () => (modal.style.display = "none");
-    window.onclick = e => { if (e.target == modal) modal.style.display = "none"; };
+    modalBody.innerHTML = `
+      <table>
+        <tr><th>รหัส</th><td>${d.code}</td></tr>
+        <tr><th>ชื่อครุภัณฑ์</th><td>${d.name}</td></tr>
+        <tr><th>ที่เก็บ</th><td>${d.location}</td></tr>
+        <tr><th>สถานะ</th><td>${d.status}</td></tr>
+        <tr><th>รายละเอียดเพิ่มเติม</th><td>${d.detail}</td></tr>
+        <tr><th>หมวด</th><td>${d.category}</td></tr>
+        <tr><th>วันที่</th><td>${d.date}</td></tr>
+        <tr><th>เวลา</th><td>${d.time}</td></tr>
+      </table>
+    `;
+    modal.style.display = "block";
+  }
 
-    searchInput.addEventListener("input", e => {
-      const keyword = e.target.value.toLowerCase();
-      const filtered = data.filter(d =>
-        Object.values(d).some(v => (v || "").toLowerCase().includes(keyword))
-      );
-      renderTable(filtered);
-    });
+  closeModal.onclick = () => modal.style.display = "none";
+  window.onclick = e => { if (e.target === modal) modal.style.display = "none"; };
 
-    loadEquipment();
-  </script>
+  searchInput.addEventListener("input", e => {
+    const keyword = e.target.value.toLowerCase();
+    const filtered = data.filter(d =>
+      Object.values(d).some(v => (v || "").toLowerCase().includes(keyword))
+    );
+    renderTable(filtered);
+  });
+
+  loadEquipment();
+</script>
+
 </body>
 </html>
