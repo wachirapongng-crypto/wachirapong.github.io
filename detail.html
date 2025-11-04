@@ -5,14 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>รายละเอียดครุภัณฑ์</title>
   <link rel="stylesheet" href="detail.css">
+  <style>
+    /* เบาๆ ให้ดูไม่เละ */
+    body { font-family: "Prompt", sans-serif; background:#f4f6f8; margin:0; padding:20px; }
+    header { display:flex; justify-content:space-between; align-items:center; background:#0a3d62; color:#fff; padding:12px 18px; border-radius:6px; }
+    .detail-box { margin-top:18px; background:#fff; padding:18px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+    table { width:100%; border-collapse:collapse; margin-top:12px; }
+    th, td { padding:8px 10px; border:1px solid #eee; text-align:left; font-size:14px; }
+    th { background:#3c6382; color:#fff; }
+    .notfound { color:#d00; }
+  </style>
 </head>
 <body>
   <header>
     <div class="logo">logo</div>
     <h1>ระบบตรวจสอบครุภัณฑ์</h1>
-    <div class="right">
-      <a href="index.html" class="login-btn">กลับหน้าแรก</a>
-    </div>
+    <div class="right"><a href="index.html" style="color:#fff;text-decoration:none;">กลับหน้าแรก</a></div>
   </header>
 
   <main>
@@ -23,77 +31,203 @@
 
   <script>
     const params = new URLSearchParams(window.location.search);
-    const id = params.get("id"); // รับรหัสจากหน้า index เช่น ?id=001
+    const id = params.get("id"); // ?id=...
 
     const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
     const sheetName = "LOG";
     const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
 
+    // helper
+    function pad(n){ return String(n).padStart(2,'0'); }
+
+    // แปลงค่าสตริงแบบ Date(....) หรือ ISO หรือ JS Date ให้เป็นวันที่ "DD/MM/YYYY"
+    function formatDateCell(val){
+      if (!val && val !== 0) return "-";
+
+      // ถ้าเป็นสตริงแบบ "Date(...)" (ที่ Google ส่งมาชอบเป็นแบบนี้เวลา publish)
+      if (typeof val === 'string') {
+        const m = val.match(/Date\(([^)]+)\)/);
+        if (m) {
+          const parts = m[1].split(',').map(s => parseInt(s,10));
+          // รูปแบบที่เจอได้: [YYYY,MM,DD]  หรือ [YYYY,MM,DD,HH,MM,SS]
+          if (parts.length >= 3) {
+            const year = parts[0];
+            const month = parts[1]; // จากตัวอย่างของคุณ month = 9 -> กันยายน (ใช้ตรงๆ)
+            const day = parts[2];
+            return `${pad(day)}/${pad(month)}/${year}`;
+          }
+        }
+        // ถ้าเป็น ISO date string เช่น "2025-09-12T..." รองรับด้วย
+        const iso = Date.parse(val);
+        if (!isNaN(iso)) {
+          const d = new Date(iso);
+          return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+        }
+        // ถ้ไม่ match ให้คืนค่าเดิม
+        return val;
+      }
+
+      // ถ้าเป็น object (อาจเป็น JS Date) หรือ number (timestamp)
+      if (val instanceof Date) {
+        return `${pad(val.getDate())}/${pad(val.getMonth()+1)}/${val.getFullYear()}`;
+      }
+      if (typeof val === 'number') {
+        const d = new Date(val);
+        if (!isNaN(d)) return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+        return String(val);
+      }
+
+      // default
+      return String(val);
+    }
+
+    // แปลงค่าสตริงแบบ Date(...,HH,MM,SS) หรือ ISO หรือ JS Date ให้เป็นเวลา "HH:MM"
+    function formatTimeCell(val){
+      if (!val && val !== 0) return "-";
+
+      if (typeof val === 'string') {
+        const m = val.match(/Date\(([^)]+)\)/);
+        if (m) {
+          const parts = m[1].split(',').map(s => parseInt(s,10));
+          // ถ้ามีเวลาใน parts (เช่น [1899,11,30,9,30,0])
+          if (parts.length >= 6) {
+            const hh = parts[3];
+            const mm = parts[4];
+            return `${pad(hh)}:${pad(mm)}`;
+          }
+          // บางครั้งเวลาอาจอยู่ในรูปแยกคอลัมน์ด้วยสตริง "09:30:00"
+        }
+        // ถ้าเป็น ISO datetime
+        const iso = Date.parse(val);
+        if (!isNaN(iso)) {
+          const d = new Date(iso);
+          return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+        // ถ้าสตริงตรงๆ แบบ "09:30" หรือ "09:30:00"
+        const t = val.match(/(\d{1,2}):(\d{2})/);
+        if (t) return `${pad(t[1])}:${pad(t[2])}`;
+        return val;
+      }
+
+      if (val instanceof Date) {
+        return `${pad(val.getHours())}:${pad(val.getMinutes())}`;
+      }
+      if (typeof val === 'number') {
+        const d = new Date(val);
+        if (!isNaN(d)) return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        return String(val);
+      }
+
+      return String(val);
+    }
+
     async function loadDetail() {
+      const container = document.getElementById("detail");
+      if (!id) {
+        container.innerHTML = `<div class="notfound">ไม่พบพารามิเตอร์ id ใน URL</div>`;
+        return;
+      }
+
       try {
         const res = await fetch(baseURL);
         const text = await res.text();
-        const json = JSON.parse(text.substr(47).slice(0, -2));
-        const rows = json.table.rows.map(r => r.c.map(c => (c ? c.v : "")));
 
-        // คอลัมน์: [รหัส, ชื่อ, ที่เก็บ, สถานะ, รายละเอียดเพิ่มเติม, หมวด, วันที่, เวลา]
-        const logs = rows.filter(r => r[0] == id);
+        // parse gviz response (ปลอดภัยกว่าตัดตำแหน่ง)
+        const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);/);
+        if (!match) throw new Error("รูปแบบ response จาก Google Sheets ไม่ถูกต้อง");
+        const json = JSON.parse(match[1]);
 
-        if (logs.length > 0) {
-          const first = logs[0];
-          const assetCode = first[0] || "-";
-          const assetName = first[1] || "-";
-          const category = first[5] || "-";
-
-          const tableRows = logs.map(r => `
-            <tr>
-              <td>${r[6] || "-"}</td>
-              <td>${r[7] || "-"}</td>
-              <td>${r[1] || "-"}</td>
-              <td>${r[2] || "-"}</td>
-              <td>${r[3] || "-"}</td>
-              <td>${r[4] || "-"}</td>
-              <td>${r[5] || "-"}</td>
-            </tr>
-          `).join("");
-
-          document.getElementById("detail").innerHTML = `
-            <div class="asset-info">
-              <p><strong>รหัสครุภัณฑ์:</strong> ${assetCode}</p>
-              <p><strong>ชื่อครุภัณฑ์:</strong> ${assetName}</p>
-              <p><strong>หมวด:</strong> ${category}</p>
-            </div>
-            <div class="asset-table">
-              <h3>ประวัติข้อมูล</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>วันที่</th>
-                    <th>เวลา</th>
-                    <th>ชื่อครุภัณฑ์</th>
-                    <th>ที่เก็บ</th>
-                    <th>สถานะ</th>
-                    <th>รายละเอียดเพิ่มเติม</th>
-                    <th>หมวด</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${tableRows}
-                </tbody>
-              </table>
-            </div>
-          `;
-        } else {
-          document.getElementById("detail").innerHTML = `
-            <div class="notfound">ไม่พบข้อมูลครุภัณฑ์รหัส: <b>${id}</b></div>
-          `;
+        if (!json.table || !json.table.rows) {
+          container.innerHTML = `<div class="notfound">ข้อมูลจากชีตไม่ถูกต้อง</div>`;
+          return;
         }
-      } catch (error) {
-        console.error(error);
-        document.getElementById("detail").innerHTML = `
-          <div class="notfound">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>
+
+        // rows: แต่ละค่า r.c[i] อาจเป็น null หรือ มี .v/.f
+        const rows = json.table.rows.map(r => (r.c || []).map(cell => {
+          // ถ้ามี formatted value .f ให้ใช้ .f เป็นสำรอง แต่เราเก็บ v (ดิบ) เพื่อแปลงเอง
+          if (!cell) return null;
+          // ถ้า v เป็น object (เช่น Date object) -> stringify? แต่จาก gviz v มักเป็น string like "Date(...)"
+          return cell.v ?? cell.f ?? null;
+        }));
+
+        // LOG sheet columns you gave:
+        // index 0: รหัสครุภัณฑ์
+        // 1: ชื่อครุภัณฑ์
+        // 2: ที่เก็บ
+        // 3: สถานะ
+        // 4: รายละเอียดเพิ่มเติม
+        // 5: หมวด
+        // 6: วันที่
+        // 7: เวลา
+
+        const logs = rows.filter(r => r && String(r[0]) === String(id));
+
+        if (logs.length === 0) {
+          container.innerHTML = `<div class="notfound">ไม่พบข้อมูลครุภัณฑ์รหัส: <b>${id}</b></div>`;
+          return;
+        }
+
+        const first = logs[0];
+        const assetCode = first[0] || "-";
+        const assetName = first[1] || "-";
+        const category = first[5] || "-";
+
+        // สร้างตาราง
+        const tableHtmlRows = logs.map(r => {
+          const dateStr = formatDateCell(r[6]);
+          const timeStr = formatTimeCell(r[7]);
+          return `<tr>
+            <td>${dateStr}</td>
+            <td>${timeStr}</td>
+            <td>${escapeHtml(r[1] || "-")}</td>
+            <td>${escapeHtml(r[2] || "-")}</td>
+            <td>${escapeHtml(r[3] || "-")}</td>
+            <td>${escapeHtml(r[4] || "-")}</td>
+            <td>${escapeHtml(r[5] || "-")}</td>
+          </tr>`;
+        }).join("");
+
+        container.innerHTML = `
+          <div class="asset-info">
+            <p><strong>รหัสครุภัณฑ์:</strong> ${escapeHtml(assetCode)}</p>
+            <p><strong>ชื่อครุภัณฑ์:</strong> ${escapeHtml(assetName)}</p>
+            <p><strong>หมวด:</strong> ${escapeHtml(category)}</p>
+          </div>
+
+          <div class="asset-table">
+            <h3>ประวัติข้อมูล</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>วันที่</th>
+                  <th>เวลา</th>
+                  <th>ชื่อครุภัณฑ์</th>
+                  <th>ที่เก็บ</th>
+                  <th>สถานะ</th>
+                  <th>รายละเอียดเพิ่มเติม</th>
+                  <th>หมวด</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableHtmlRows}
+              </tbody>
+            </table>
+          </div>
         `;
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `<div class="notfound">เกิดข้อผิดพลาด: ${escapeHtml(err.message)}</div>`;
       }
+    }
+
+    function escapeHtml(str){
+      if (str == null) return "";
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'", "&#39;");
     }
 
     loadDetail();
