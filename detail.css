@@ -1,107 +1,92 @@
+/* ===== Theme Colors (ฟ้าอ่อน) ===== */
 :root {
-  --main-blue: #4da6ff;      /* สีฟ้าหลักสว่าง */
-  --accent-blue: #80c1ff;    /* สีฟ้าเน้น/hover */
-  --light-blue: #cce6ff;     /* สีฟ้าอ่อนสำหรับ focus */
-  --light-gray: #f4f6f8;     /* สีพื้นหลัง */
+  --main-blue: #5ab2ff;       /* ฟ้าอ่อนหลัก */
+  --accent-blue: #7bc9ff;     /* ฟ้าอ่อนสำหรับ hover */
+  --soft-blue: #d9efff;       /* ฟ้าอ่อนมาก */
+  --background-light: #eaf5ff;/* สีพื้นหลัง */
   --white: #ffffff;
+  --text-dark: #333;
 }
 
 body {
   font-family: "Prompt", sans-serif;
   margin: 0;
-  background: var(--light-gray);
-  color: #333;
+  background: var(--background-light);
+  color: var(--text-dark);
 }
 
 /* ===== Header ===== */
 header {
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   background: var(--main-blue);
   color: var(--white);
-  padding: 12px 5%;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 14px 6%;
+  font-size: 1.2em;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
 }
 
 .logo {
   font-weight: bold;
-  font-size: 1.2em;
 }
 
-h1 {
-  font-size: 1.3em;
-  margin: 0;
-}
-
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-.search-input {
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  outline: none;
-  transition: border-color 0.2s;
-  width: 150px;
-  max-width: 100%;
-}
-
-.search-input:focus {
-  border-color: var(--light-blue);
-}
-
-.login-btn {
-  background: var(--white);
-  color: var(--main-blue);
-  padding: 6px 14px;
-  border-radius: 8px;
+.right a {
+  color: var(--white);
   text-decoration: none;
   font-weight: bold;
-  transition: background 0.2s;
 }
 
-.login-btn:hover {
-  background: var(--accent-blue);
-  color: var(--white);
+/* ===== Main detail box ===== */
+.detail-box {
+  max-width: 900px;
+  margin: 40px auto;
+  background: var(--soft-blue);
+  padding: 25px 30px;
+  border-radius: 18px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-/* ===== ตาราง ===== */
-.table-section {
-  margin: 30px auto;
-  background: var(--white);
-  border-radius: 12px;
-  padding: 20px;
-  width: 90%;
-  max-width: 1000px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  overflow-x: auto;
-}
-
-.table-header h2 {
+/* ข้อความหัวข้อ */
+.detail-box h2,
+.asset-table h3 {
   color: var(--main-blue);
-  margin-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+/* ===== Asset info ===== */
+.asset-info {
+  background: var(--white);
+  padding: 18px;
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  margin-bottom: 25px;
+}
+
+.asset-info p {
+  margin: 6px 0;
+  font-size: 1.05em;
+}
+
+/* ===== Table ===== */
+.asset-table {
+  background: var(--white);
+  padding: 18px;
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  border-radius: 8px;
-  overflow: hidden;
-  min-width: 400px;
 }
 
 th {
-  background: var(--accent-blue);
+  background: var(--main-blue);
   color: var(--white);
   text-align: left;
   padding: 10px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 td {
@@ -109,120 +94,33 @@ td {
   border-bottom: 1px solid #eee;
 }
 
+/* แถวสลับสี */
 tr:nth-child(even) {
-  background: #f9fbfc;
+  background: #f8fbff;
 }
 
+/* Hover */
 tr:hover {
-  background: var(--light-blue);
-}
-
-.detail-btn {
-  background: var(--main-blue);
-  color: var(--white);
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9em;
-  transition: background 0.2s;
-}
-
-.detail-btn:hover {
   background: var(--accent-blue);
+  color: var(--white);
 }
 
-/* ===== Modal ===== */
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 10;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.modal-content {
-  background: var(--white);
-  margin: 8% auto;
-  padding: 20px;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 600px;
-  position: relative;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
-}
-
-.modal-content h3 {
-  color: var(--main-blue);
-  margin-top: 0;
-}
-
-.close {
-  position: absolute;
-  right: 15px;
-  top: 10px;
-  cursor: pointer;
-  font-size: 22px;
-  color: #777;
-  transition: color 0.2s;
-}
-
-.close:hover {
-  color: var(--accent-blue);
-}
-
-#errorBox {
+/* ข้อความ error */
+.notfound {
   color: red;
-  margin: 10px 0;
-  text-align: center;
   font-weight: bold;
+  text-align: center;
+  padding: 20px;
 }
 
-.debug {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #666;
-  background: #fff;
-  padding: 8px;
-  border-radius: 6px;
-  max-height: 120px;
-  overflow: auto;
-}
-
-/* ===== Media Queries ===== */
+/* Responsive */
 @media (max-width: 768px) {
-  header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .header-actions {
-    width: 100%;
-    justify-content: flex-start;
-    gap: 5px;
-    margin-top: 10px;
+  .detail-box {
+    padding: 20px;
+    margin: 20px;
   }
 
   table {
     font-size: 0.9em;
-  }
-}
-
-@media (max-width: 480px) {
-  h1, .logo {
-    font-size: 1em;
-  }
-
-  .search-input {
-    width: 100%;
-  }
-
-  .detail-btn {
-    padding: 4px 8px;
-    font-size: 0.8em;
   }
 }
