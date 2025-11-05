@@ -1,13 +1,14 @@
-/* ===== Theme Colors (ฟ้าอ่อน) ===== */
+/* ===== Theme Colors ===== */
 :root {
-  --main-blue: #5ab2ff;       /* ฟ้าอ่อนหลัก */
-  --accent-blue: #7bc9ff;     /* ฟ้าอ่อนสำหรับ hover */
-  --soft-blue: #d9efff;       /* ฟ้าอ่อนมาก */
-  --background-light: #eaf5ff;/* สีพื้นหลัง */
+  --main-blue: #5ab2ff;
+  --accent-blue: #7bc9ff;
+  --soft-blue: #d9efff;
+  --background-light: #eaf5ff;
   --white: #ffffff;
   --text-dark: #333;
 }
 
+/* ===== Global ===== */
 body {
   font-family: "Prompt", sans-serif;
   margin: 0;
@@ -15,49 +16,32 @@ body {
   color: var(--text-dark);
 }
 
-/* ===== Header ===== */
+/* ===== Header — ปรับให้เท่าหน้า index.html ===== */
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: var(--main-blue);
   color: var(--white);
-  padding: 14px 6%;
-  font-size: 1.2em;
+  padding: 12px 5%;     /* ✅ เท่ากับหน้าแรกแล้ว */
+  font-size: 1.1em;
   box-shadow: 0 3px 8px rgba(0,0,0,0.15);
 }
 
-.logo {
-  font-weight: bold;
-}
-
-.right a {
-  color: var(--white);
-  text-decoration: none;
-  font-weight: bold;
-}
-
-/* ===== Main detail box ===== */
+/* ===== Main Container ===== */
 .detail-box {
   max-width: 900px;
-  margin: 40px auto;
+  margin: 30px auto;
   background: var(--soft-blue);
-  padding: 25px 30px;
-  border-radius: 18px;
+  padding: 22px 25px;
+  border-radius: 16px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-/* ข้อความหัวข้อ */
-.detail-box h2,
-.asset-table h3 {
-  color: var(--main-blue);
-  margin-bottom: 15px;
-}
-
-/* ===== Asset info ===== */
+/* ===== Asset Info ===== */
 .asset-info {
   background: var(--white);
-  padding: 18px;
+  padding: 16px;
   border-radius: 14px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   margin-bottom: 25px;
@@ -65,28 +49,30 @@ header {
 
 .asset-info p {
   margin: 6px 0;
-  font-size: 1.05em;
+  font-size: 1em;
 }
 
-/* ===== Table ===== */
+/* ===== Table Container — ✅ ป้องกันอัดในมือถือ ===== */
 .asset-table {
   background: var(--white);
-  padding: 18px;
+  padding: 16px;
   border-radius: 14px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+
+  overflow-x: auto;        /* ✅ ใส่ให้เลื่อนซ้ายขวาได้ในมือถือ */
 }
 
-table {
+.asset-table table {
   width: 100%;
+  min-width: 650px;        /* ✅ ป้องกันบีบจนอ่านไม่ได้ */
   border-collapse: collapse;
 }
 
 th {
   background: var(--main-blue);
   color: var(--white);
-  text-align: left;
   padding: 10px;
-  font-weight: 600;
+  text-align: left;
 }
 
 td {
@@ -105,7 +91,7 @@ tr:hover {
   color: var(--white);
 }
 
-/* ข้อความ error */
+/* ===== Not Found ===== */
 .notfound {
   color: red;
   font-weight: bold;
@@ -113,14 +99,26 @@ tr:hover {
   padding: 20px;
 }
 
-/* Responsive */
+/* ===== Responsive ===== */
 @media (max-width: 768px) {
-  .detail-box {
-    padding: 20px;
-    margin: 20px;
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px 5%;    /* ✅ ให้ไม่สูงเกินไป */
   }
 
-  table {
+  .detail-box {
+    margin: 20px;
+    padding: 18px;
+  }
+
+  .asset-table table {
     font-size: 0.9em;
+  }
+}
+
+@media (max-width: 480px) {
+  .asset-table table {
+    font-size: 0.85em;
   }
 }
