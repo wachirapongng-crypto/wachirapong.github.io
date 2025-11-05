@@ -16,19 +16,28 @@ body {
   color: var(--text-dark);
 }
 
-/* ===== Header — ปรับให้เท่าหน้า index.html ===== */
+/* ===== Header ===== */
 header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: var(--main-blue);
   color: var(--white);
-  padding: 12px 5%;     /* ✅ เท่ากับหน้าแรกแล้ว */
+  padding: 12px 5%;     /* ✅ เหมือนหน้าแรก */
   font-size: 1.1em;
   box-shadow: 0 3px 8px rgba(0,0,0,0.15);
 }
 
-/* ===== Main Container ===== */
+.back-btn {
+  background: var(--white);
+  padding: 6px 14px;
+  border-radius: 8px;
+  color: var(--main-blue);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+/* ===== Layout Box ===== */
 .detail-box {
   max-width: 900px;
   margin: 30px auto;
@@ -41,7 +50,7 @@ header {
 /* ===== Asset Info ===== */
 .asset-info {
   background: var(--white);
-  padding: 16px;
+  padding: 18px;
   border-radius: 14px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
   margin-bottom: 25px;
@@ -49,22 +58,31 @@ header {
 
 .asset-info p {
   margin: 6px 0;
-  font-size: 1em;
+  font-size: 1.05em;
 }
 
-/* ===== Table Container — ✅ ป้องกันอัดในมือถือ ===== */
+/* ===== History Table ===== */
 .asset-table {
   background: var(--white);
-  padding: 16px;
+  padding: 18px;
   border-radius: 14px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-
-  overflow-x: auto;        /* ✅ ใส่ให้เลื่อนซ้ายขวาได้ในมือถือ */
 }
 
-.asset-table table {
+.asset-table h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+/* ✅ รองรับมือถือ */
+.table-wrapper {
   width: 100%;
-  min-width: 650px;        /* ✅ ป้องกันบีบจนอ่านไม่ได้ */
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 650px;   /* ✅ ป้องกันบีบจนอ่านไม่ได้ */
   border-collapse: collapse;
 }
 
@@ -73,6 +91,7 @@ th {
   color: var(--white);
   padding: 10px;
   text-align: left;
+  font-weight: bold;
 }
 
 td {
@@ -91,34 +110,34 @@ tr:hover {
   color: var(--white);
 }
 
-/* ===== Not Found ===== */
-.notfound {
-  color: red;
-  font-weight: bold;
+/* ===== Loading Style ===== */
+.loading {
   text-align: center;
-  padding: 20px;
+  padding: 25px;
+  color: var(--text-dark);
 }
 
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   header {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 10px 5%;    /* ✅ ให้ไม่สูงเกินไป */
+    flex-direction: row;     /* ✅ ไม่ให้ header ซ้อนกัน */
+    align-items: center;
+    padding: 10px 5%;
+  }
+
+  th, td {
+    padding: 12px 14px;      /* ✅ ลดความอัด */
+    white-space: nowrap;     /* ✅ ไม่ตัดคำจนเละ */
   }
 
   .detail-box {
-    margin: 20px;
+    margin: 15px;
     padding: 18px;
-  }
-
-  .asset-table table {
-    font-size: 0.9em;
   }
 }
 
 @media (max-width: 480px) {
-  .asset-table table {
-    font-size: 0.85em;
+  table {
+    font-size: 0.9em;
   }
 }
