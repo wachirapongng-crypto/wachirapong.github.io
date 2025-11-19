@@ -1,0 +1,84 @@
+/* รีเซ็ตค่าเริ่มต้น */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Prompt", sans-serif;
+}
+
+/* พื้นหลังโทนฟ้าอ่อน */
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #aee6ff, #7bc9ff); /* ✅ ฟ้านุ่ม */
+}
+
+/* กล่องฟอร์ม */
+.login-container {
+  background-color: #ffffff;
+  padding: 2rem 2.5rem;
+  border-radius: 18px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  width: 320px;
+  text-align: center;
+  border: 3px solid #d9efff; /* ✅ กรอบฟ้าอ่อน */
+}
+
+/* หัวข้อ */
+h2 {
+  margin-bottom: 1.5rem;
+  color: #3a7bd5; /* ✅ ฟ้าเข้มเล็กน้อย */
+}
+
+/* ช่องกรอกข้อมูล */
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0 16px 0;
+  border: 1px solid #b5dfff; /* ✅ ฟ้าอ่อน */
+  border-radius: 10px;
+  font-size: 1rem;
+  background: #f4fbff; /* ✅ ฟ้านวล */
+}
+
+/* ปุ่ม */
+button {
+  width: 100%;
+  padding: 12px;
+  background-color: #5ab2ff; /* ✅ ฟ้าสด */
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: 0.25s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+button:hover {
+  background-color: #44a6ff; /* ✅ ฟ้าเข้มขึ้นตอน hover */
+}
+
+/* ข้อความ error */
+.error {
+  color: #ff4f4f; /* ✅ แดงอ่อน อ่านง่าย */
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+/* ลิงก์กลับหน้าแรก */
+.back-home {
+  margin-top: 1.2rem;
+}
+
+.back-home a {
+  color: #5ab2ff;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.back-home a:hover {
+  text-decoration: underline;
+}
