@@ -93,8 +93,8 @@
         const [code, name, , , , category] = logs[0];
         const tableRows = logs.map(r => `
           <tr>
-            <td>${formatDateCell(r[6])}</td>
-            <td>${formatTimeCell(r[7])}</td>
+            <td>${formatDateCell(r[5])}</td>
+            <td>${formatTimeCell(r[6])}</td>
             <td>${escapeHtml(r[2])}</td>
             <td>${escapeHtml(r[3])}</td>
             <td>${escapeHtml(r[4])}</td>
