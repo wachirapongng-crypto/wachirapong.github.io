@@ -1,9 +1,8 @@
 const params = new URLSearchParams(window.location.search);
-    const id = params.get("id");
-
-    const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
-    const sheetName = "LOG";
-    const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
+const id = params.get("id");
+const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
+const sheetName = "LOG";
+const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
 
     function pad(n){ return String(n).padStart(2,'0'); }
 
