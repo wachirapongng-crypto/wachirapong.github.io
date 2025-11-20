@@ -1,0 +1,44 @@
+<body>
+
+<header>
+  <h1>ระบบจัดการครุภัณฑ์ (Admin)</h1>
+  <div class="header-right">
+    <div class="user-info">👤 <span id="username">Admin</span></div>
+    <button id="logout-btn">ออกจากระบบ</button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- === Sidebar === -->
+  <aside class="sidebar">
+    <ul>
+      <li onclick="openMenu('add')">➕ เพิ่มรายการครุภัณฑ์</li>
+      <li onclick="openMenu('edit')">✏️ แก้ไขรายการครุภัณฑ์</li>
+      <li onclick="openMenu('wait')">🕓 ครุภัณฑ์ที่รอตรวจสอบ</li>
+      <li onclick="openMenu('report')">📊 ออกรายงานครุภัณฑ์</li>
+      <li onclick="openMenu('list')">📋 รายการครุภัณฑ์ทั้งหมด</li>
+      <li onclick="openMenu('manual')">📘 คู่มือการใช้งาน</li>
+
+      <li class="admin-only" onclick="openMenu('user')">👥 จัดการสมาชิก</li>
+    </ul>
+  </aside>
+
+  <!-- === Main content === -->
+  <main id="main-content">
+    <h2>เลือกเมนูจากด้านซ้าย</h2>
+  </main>
+
+</div>
+
+<!-- popup form -->
+<section id="form-section">
+  <div class="form-box">
+    <span class="close-btn">×</span>
+    <h2 id="form-title">ฟอร์ม</h2>
+    <div id="form-content"></div>
+  </div>
+</section>
+
+<script src="dashboard.js"></script>
+</body>
