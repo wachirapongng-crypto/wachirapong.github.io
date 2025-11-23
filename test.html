@@ -3,114 +3,98 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ระบบครุภัณฑ์</title>
+<title>ระบบ WAIT → LOG</title>
 <style>
-table { border-collapse: collapse; width: 100%; }
-th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
-select { width: 100%; }
-button { margin: 5px; }
+  table, th, td { border: 1px solid #333; border-collapse: collapse; padding:5px; }
+  th { background: #eee; }
+  select { width: 120px; }
+  button { margin: 2px; }
 </style>
 </head>
 <body>
 <h2>ข้อมูล WAIT</h2>
+<button onclick="loadData()">รีเฟรช</button>
 <div id="detail"></div>
-<button id="refreshBtn">รีเฟรชข้อมูล</button>
+
 <script>
-const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
-const waitSheet = "WAIT";
-const logSheet = "LOG";
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyJs8nqYded2182FtQCbcyGYiwUiFXb1EH7n1zjv2H6-q98-FLlkLJ-THVYlJ1RJaH3/exec"; // ใส่ Web App URL ของคุณ
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyuhgxopkMntJ_SY3DGZgDQYTFxnudR45XeiT6Foldbf_VeSRgGGA0ylLfvMx7vGRk/exec"; // ใส่ URL Web App ของคุณ
 
-const addressOptions = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
-const statusOptions = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
+const addresses = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
+const statuses  = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
 
-function pad(n){return String(n).padStart(2,'0');}
-function formatDateCell(val){ /* ใช้ฟังก์ชันเดิม */ return val; }
-function formatTimeCell(val){ /* ใช้ฟังก์ชันเดิม */ return val; }
-function escapeHtml(str){ return str==null?"":String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'", "&#39;"); }
-
-let WAIT_ROWS = [];
-
-function drawTable(json){
-    const data = JSON.parse(json.substring(47,json.length-2)).table.rows;
-    WAIT_ROWS = data.map(r => (r.c||[]).map(c => c?c.v:""));
-    const tableRows = WAIT_ROWS.map((r,i)=>`
-        <tr data-index="${i}">
-            <td>${escapeHtml(r[0])}</td>
-            <td>${escapeHtml(r[1])}</td>
-            <td>
-              <select>${addressOptions.map(a=>`<option value="${a}" ${r[2]==a?'selected':''}>${a}</option>`)}</select>
-            </td>
-            <td>
-              <select>${statusOptions.map(s=>`<option value="${s}" ${r[3]==s?'selected':''}>${s}</option>`)}</select>
-            </td>
-            <td>${formatDateCell(r[4])}</td>
-            <td>${formatTimeCell(r[5])}</td>
-            <td><button class="deleteBtn">ลบ</button></td>
-        </tr>
-    `).join("");
-    document.getElementById("detail").innerHTML = `
-        <table>
-            <thead>
-                <tr><th>รหัส</th><th>ชื่อ</th><th>ที่อยู่</th><th>สถานะ</th><th>วันที่</th><th>เวลา</th><th>จัดการ</th></tr>
-            </thead>
-            <tbody>${tableRows}</tbody>
-        </table>
-        <button id="updateBtn">อัปเดตข้อมูลไป LOG</button>
-    `;
-    attachEvents();
+function loadData(){
+  const script = document.createElement('script');
+  script.src = WEB_APP_URL + '?sheet=WAIT&callback=displayData';
+  document.body.appendChild(script);
 }
 
-function attachEvents(){
-    document.querySelectorAll(".deleteBtn").forEach(btn=>{
-        btn.onclick = e=>{
-            const tr = e.target.closest("tr");
-            const index = tr.dataset.index;
-            deleteRow(index);
-        }
-    });
-    document.getElementById("updateBtn").onclick = updateRows;
+function displayData(rows){
+  const container = document.getElementById('detail');
+  if (!rows || rows.error) { container.innerHTML = "โหลดข้อมูลล้มเหลว"; return; }
+
+  const tableRows = rows.map(r => `
+    <tr>
+      <td>${r.ID}</td>
+      <td>${r.Name}</td>
+      <td>
+        <select onchange="r_address(this,'${r.ID}')">
+          ${addresses.map(a=>`<option ${a==r.Address?'selected':''}>${a}</option>`).join('')}
+        </select>
+      </td>
+      <td>
+        <select onchange="r_status(this,'${r.ID}')">
+          ${statuses.map(s=>`<option ${s==r.Status?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td>${r.Date}</td>
+      <td>${r.Time}</td>
+      <td>
+        <button onclick="updateToLog('${r.ID}')">Update</button>
+        <button onclick="deleteFromWait('${r.ID}')">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+
+  container.innerHTML = `<table>
+    <thead>
+      <tr><th>ID</th><th>Name</th><th>ที่อยู่</th><th>สถานะ</th><th>วันที่</th><th>เวลา</th><th>Action</th></tr>
+    </thead>
+    <tbody>${tableRows}</tbody>
+  </table>`;
 }
 
-function loadDetail(){
-    const script = document.createElement("script");
-    script.src = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${waitSheet}&callback=drawTable`;
-    document.body.appendChild(script);
+// เก็บค่า select
+let tempAddress = {}, tempStatus = {};
+function r_address(sel,id){ tempAddress[id] = sel.value; }
+function r_status(sel,id){ tempStatus[id] = sel.value; }
+
+// อัปเดตกลับ LOG + ลบ WAIT
+function updateToLog(id){
+  const address = tempAddress[id] || '';
+  const status  = tempStatus[id]  || '';
+
+  fetch(WEB_APP_URL, {
+    method:'POST',
+    body: JSON.stringify({action:'updateToLog', ID:id, address, status})
+  }).then(r=>r.json()).then(d=>{
+    alert(d.status);
+    loadData();
+  });
 }
 
-function deleteRow(index){
-    const row = WAIT_ROWS[index];
-    fetch(GAS_URL,{
-        method:"POST",
-        body:JSON.stringify({action:"delete",sheet:waitSheet,ID:row[0]}),
-        headers:{"Content-Type":"application/json"}
-    }).then(()=>loadDetail());
+// ลบ WAIT
+function deleteFromWait(id){
+  fetch(WEB_APP_URL, {
+    method:'POST',
+    body: JSON.stringify({action:'deleteFromWait', ID:id})
+  }).then(r=>r.json()).then(d=>{
+    alert(d.status);
+    loadData();
+  });
 }
 
-function updateRows(){
-    const rows = Array.from(document.querySelectorAll("#detail tbody tr")).map(tr=>{
-        const i = tr.dataset.index;
-        const r = WAIT_ROWS[i];
-        const addr = tr.querySelector("td:nth-child(3) select").value;
-        const stat = tr.querySelector("td:nth-child(4) select").value;
-        return {ID:r[0],Name:r[1],Address:addr,Status:stat,Date:r[4],Time:r[5]};
-    });
-    // เพิ่มข้อมูลไป LOG และลบ WAIT
-    rows.forEach(r=>{
-        fetch(GAS_URL,{
-            method:"POST",
-            body:JSON.stringify({action:"add",sheet:logSheet,ID:r.ID,Name:r.Name,Address:r.Address,Status:r.Status,Date:r.Date,Time:r.Time}),
-            headers:{"Content-Type":"application/json"}
-        }).then(()=>fetch(GAS_URL,{
-            method:"POST",
-            body:JSON.stringify({action:"delete",sheet:waitSheet,ID:r.ID}),
-            headers:{"Content-Type":"application/json"}
-        }).then(()=>loadDetail()));
-    });
-}
-
-document.getElementById("refreshBtn").onclick = loadDetail;
-loadDetail();
+// โหลดตอนเปิด
+loadData();
 </script>
 </body>
 </html>
