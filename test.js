@@ -1,220 +1,113 @@
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("username").textContent =
-    localStorage.getItem("username") || "Admin";
+const params = new URLSearchParams(window.location.search);
+const id = params.get("id");
 
-  // ================================
-  // ⚡ URL Google Sheets
-  // ================================
-  const SHEET_URL = {
-    DATA: "https://script.google.com/macros/s/AKfycbyKfmT4sQmqDLm80EihmaQ5-ynSlPA5f3hIABVzIljaYzfWtj1S-nRPQKp8j0PWLTsH/exec?sheet=DATA",
-    WAIT: "https://script.google.com/macros/s/AKfycbyKfmT4sQmqDLm80EihmaQ5-ynSlPA5f3hIABVzIljaYzfWtj1S-nRPQKp8j0PWLTsH/exec?sheet=WAIT",
-    SHOW: "https://script.google.com/macros/s/AKfycbyKfmT4sQmqDLm80EihmaQ5-ynSlPA5f3hIABVzIljaYzfWtj1S-nRPQKp8j0PWLTsH/exec?sheet=SHOW",
-    LOGIN: "https://script.google.com/macros/s/AKfycbyKfmT4sQmqDLm80EihmaQ5-ynSlPA5f3hIABVzIljaYzfWtj1S-nRPQKp8j0PWLTsH/exec?sheet=LOGIN",
-    MEMBER: "https://script.google.com/macros/s/AKfycbyKfmT4sQmqDLm80EihmaQ5-ynSlPA5f3hIABVzIljaYzfWtj1S-nRPQKp8j0PWLTsH/exec?sheet=MEMBER"
-  };
+const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
+const sheetName = "WAIT"; // เปลี่ยนจาก LOG → WAIT
+const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
 
-  const formSection = document.getElementById("form-section");
-  const formTitle = document.getElementById("form-title");
-  const formContent = document.getElementById("form-content");
-  const closeBtn = document.querySelector(".close-btn");
-  const logoutBtn = document.getElementById("logout-btn");
+function pad(n){ return String(n).padStart(2,'0'); }
 
-  closeBtn.addEventListener("click", closeForm);
-  formSection.addEventListener("click", (e) => {
-    if (e.target === formSection) closeForm();
-  });
-  logoutBtn.addEventListener("click", logout);
+function formatDateCell(val){
+  if (!val) return "-";
+  const m = String(val).match(/Date\(([^)]+)\)/);
+  if (m) {
+    const [y, mo, d] = m[1].split(',').map(Number);
+    return `${pad(d)}/${pad(mo+1)}/${y}`;
+  }
+  const t = Date.parse(val);
+  if (!isNaN(t)) {
+    const d = new Date(t);
+    return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+  }
+  return val;
+}
 
-  const QR_COLUMNS = ["QR Code", "qr_code", "qr", "QR"];
+function formatTimeCell(val){
+  if (!val) return "-";
+  const m = String(val).match(/Date\(([^)]+)\)/);
+  if (m) {
+    const parts = m[1].split(',').map(Number);
+    if (parts.length >= 6) return `${pad(parts[3])}:${pad(parts[4])}`;
+  }
+  const t = String(val).match(/(\d{1,2}):(\d{2})/);
+  if (t) return `${pad(t[1])}:${pad(t[2])}`;
+  return val;
+}
 
+function escapeHtml(str){
+  if (str == null) return "";
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'", "&#39;");
+}
 
-  // ================================
-  // ⚡ Helper: HTML Escape
-  // ================================
-  function escapeHTML(str) {
-    return str?.toString()
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+async function loadDetail() {
+  const container = document.getElementById("detail");
+  if (!id) {
+    container.innerHTML = `<div class="notfound">ไม่พบรหัสใน URL</div>`;
+    return;
   }
 
-  // ================================
-  // ⚡ Render Cell
-  // ================================
-  function renderCell(key, val, rowIndex) {
-    const roomList = [
-      "501", "502", "503",
-      "401", "401A", "401B", "401C",
-      "402", "403", "404", "405",
-      "ห้องพักครู", "301", "302"
-    ];
-    const statusList = [
-      "ใช้งานได้", "ชำรุด", "เสื่อมสภาพ",
-      "หมดอายุการใช้งาน", "ไม่รองรับการใช้งาน"
-    ];
+  try {
+    const res = await fetch(baseURL);
+    const text = await res.text();
+    const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);/);
+    if (!match) throw new Error("response ผิดรูปแบบ");
 
-    if (typeof val === "object" && val !== null) {
-      if (val.v) val = val.v;
-      else return JSON.stringify(val);
+    const json = JSON.parse(match[1]);
+    const rows = json.table.rows.map(r => (r.c||[]).map(c => c ? c.v : ""));
+
+    // โครงสร้างข้อมูลใหม่:
+    // 0:รหัส, 1:ชื่อ, 2:ที่อยู่, 3:สถานะ, 4:วันที่, 5:เวลา
+    const logs = rows.filter(r => String(r[0]) === String(id));
+
+    if (logs.length === 0) {
+      container.innerHTML = `<div class="notfound">ไม่พบข้อมูลของรหัส: <b>${id}</b></div>`;
+      return;
     }
 
-    if (QR_COLUMNS.includes(key) && val) {
-      return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(val)}">`;
-    }
+    const [code, name] = logs[0];
 
-    if (key === "ที่อยู่") {
-      return `
-        <select class="room-select" data-row="${rowIndex}" data-col="${key}">
-          ${roomList.map(r => `<option ${r === val ? "selected" : ""}>${r}</option>`).join("")}
-        </select>`;
-    }
+    const tableRows = logs.map(r => `
+      <tr>
+        <td>${escapeHtml(r[0])}</td>
+        <td>${escapeHtml(r[1])}</td>
+        <td>${escapeHtml(r[2])}</td>
+        <td>${escapeHtml(r[3])}</td>
+        <td>${formatDateCell(r[4])}</td>
+        <td>${formatTimeCell(r[5])}</td>
+      </tr>
+    `).join("");
 
-    if (key === "สถานะ") {
-      return `
-        <select class="status-select" data-row="${rowIndex}" data-col="${key}">
-          ${statusList.map(s => `<option ${s === val ? "selected" : ""}>${s}</option>`).join("")}
-        </select>`;
-    }
+    container.innerHTML = `
+      <div class="asset-info">
+        <p><strong>รหัส:</strong> ${escapeHtml(code)}</p>
+        <p><strong>ชื่อ:</strong> ${escapeHtml(name)}</p>
+      </div>
 
-    return escapeHTML(val);
+      <div class="asset-table">
+        <h3>ข้อมูลรายการ</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>รหัส</th>
+              <th>ชื่อ</th>
+              <th>ที่อยู่</th>
+              <th>สถานะ</th>
+              <th>วันที่</th>
+              <th>เวลา</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>`;
+  } catch (err) {
+    console.error(err);
+    container.innerHTML = `<div class="notfound">โหลดข้อมูลล้มเหลว: ${escapeHtml(err.message)}</div>`;
   }
+}
 
-  // ================================
-  // ⚡ Load Data
-  // ================================
-  window.loadData = async function (sheet) {
-    try {
-      const data = await fetchData(SHEET_URL[sheet]);
-      formContent.innerHTML = await renderTable(data, sheet);
-    } catch {
-      formContent.innerHTML = "<p style='color:red;'>ไม่สามารถโหลดข้อมูล JSON ได้</p>";
-    }
-  };
-
-
-  async function fetchData(url) {
-    try {
-      const res = await fetch(url);
-      return await res.json();
-    } catch {
-      return [];
-    }
-  }
-
-  // ================================
-  // ⚡ Render Table
-  // ================================
-  async function renderTable(data, sheet) {
-    if (!Array.isArray(data) || data.length === 0)
-      return "<p>ไม่พบข้อมูล</p>";
-
-    let table = "<table><tr>";
-    const keys = Object.keys(data[0]);
-    keys.forEach(key => (table += `<th>${escapeHTML(key)}</th>`));
-    table += "</tr>";
-
-    data.forEach((row, i) => {
-      table += "<tr>";
-      keys.forEach((key) => {
-        table += `<td>${renderCell(key, row[key], i + 2)}</td>`;
-      });
-      table += "</tr>";
-    });
-
-    table += "</table>";
-    return table;
-  }
-
-  // ================================
-  // ⚡ Update to Google Sheet
-  // ================================
-  document.addEventListener("change", async (e) => {
-    const el = e.target;
-    if (el.matches(".room-select, .status-select")) {
-      const payload = {
-        sheet: "DATA",
-        row: el.dataset.row,
-        column: el.dataset.col,
-        value: el.value
-      };
-      await fetch(SHEET_URL.DATA, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-    }
-  });
-
-  // ================================
-  // ⚡ Close Form
-  // ================================
-  function closeForm() {
-    formSection.classList.remove("show");
-    formContent.innerHTML = "";
-  }
-
-  function logout() {
-    localStorage.clear();
-    location.href = "login.html";
-  }
-
-  // ================================
-  // ⚡ รวมฟังก์ชัน openMenu (A + B)
-  // ================================
-  window.openMenu = function (menu) {
-    formSection.classList.add("show");
-
-    switch (menu) {
-      case "add":
-        formTitle.textContent = "➕ เพิ่มรายการครุภัณฑ์";
-        formContent.innerHTML = `
-          <p>ฟอร์มเพิ่มข้อมูล (ยังไม่ได้ทำ)</p>
-        `;
-        break;
-
-      case "edit":
-        formTitle.textContent = "✏️ แก้ไขรายการครุภัณฑ์";
-        formContent.innerHTML = `
-          <p>ฟอร์มแก้ไขข้อมูล (ยังไม่ได้ทำ)</p>
-        `;
-        break;
-
-      case "wait":
-        formTitle.textContent = "🕓 ครุภัณฑ์ที่รอตรวจสอบ";
-        loadData("WAIT");
-        break;
-
-      case "report":
-        formTitle.textContent = "📊 ออกรายงานครุภัณฑ์";
-        formContent.innerHTML = `
-          <label>เลือกเดือน/ปี:</label>
-          <input type="month" id="month">
-          <button onclick="loadReport()">แสดงรายงาน</button>
-          <div id="report-result"></div>`;
-        break;
-
-      case "list":
-        formTitle.textContent = "📋 รายการครุภัณฑ์ทั้งหมด";
-        loadData("DATA");
-        break;
-
-      case "manual":
-        formTitle.textContent = "📘 คู่มือการใช้งาน";
-        formContent.innerHTML = `<p>ยังไม่เพิ่มคู่มือ</p>`;
-        break;
-
-      case "user":
-        formTitle.textContent = "👥 จัดการสมาชิก";
-        formContent.innerHTML = `<p>ระบบสมาชิก (ยังไม่ได้ทำ)</p>`;
-        break;
-
-      default:
-        formTitle.textContent = "เมนูไม่พบ";
-        formContent.innerHTML = "<p>ไม่มีเมนูนี้</p>";
-        break;
-    }
-  };
-
-}); // END DOMContentLoaded
+loadDetail();
