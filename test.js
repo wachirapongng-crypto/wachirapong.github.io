@@ -1,8 +1,5 @@
-const params = new URLSearchParams(window.location.search);
-const id = params.get("id");
-
 const sheetID = "1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0";
-const sheetName = "WAIT"; // เปลี่ยนจาก LOG → WAIT
+const sheetName = "WAIT";
 const baseURL = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
 
 function pad(n){ return String(n).padStart(2,'0'); }
@@ -46,10 +43,7 @@ function escapeHtml(str){
 
 async function loadDetail() {
   const container = document.getElementById("detail");
-  if (!id) {
-    container.innerHTML = `<div class="notfound">ไม่พบรหัสใน URL</div>`;
-    return;
-  }
+  if (!container) return;
 
   try {
     const res = await fetch(baseURL);
@@ -58,20 +52,10 @@ async function loadDetail() {
     if (!match) throw new Error("response ผิดรูปแบบ");
 
     const json = JSON.parse(match[1]);
-    const rows = json.table.rows.map(r => (r.c||[]).map(c => c ? c.v : ""));
+    const rows = json.table.rows.map(r => (r.c || []).map(c => c ? c.v : ""));
 
-    // โครงสร้างข้อมูลใหม่:
-    // 0:รหัส, 1:ชื่อ, 2:ที่อยู่, 3:สถานะ, 4:วันที่, 5:เวลา
-    const logs = rows.filter(r => String(r[0]) === String(id));
-
-    if (logs.length === 0) {
-      container.innerHTML = `<div class="notfound">ไม่พบข้อมูลของรหัส: <b>${id}</b></div>`;
-      return;
-    }
-
-    const [code, name] = logs[0];
-
-    const tableRows = logs.map(r => `
+    // สร้างแถวทั้งหมด
+    const tableRows = rows.map(r => `
       <tr>
         <td>${escapeHtml(r[0])}</td>
         <td>${escapeHtml(r[1])}</td>
@@ -83,13 +67,8 @@ async function loadDetail() {
     `).join("");
 
     container.innerHTML = `
-      <div class="asset-info">
-        <p><strong>รหัส:</strong> ${escapeHtml(code)}</p>
-        <p><strong>ชื่อ:</strong> ${escapeHtml(name)}</p>
-      </div>
-
       <div class="asset-table">
-        <h3>ข้อมูลรายการ</h3>
+        <h3>ข้อมูลทั้งหมดจาก WAIT</h3>
         <table>
           <thead>
             <tr>
