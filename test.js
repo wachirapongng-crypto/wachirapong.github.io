@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbxI8jIFzs3kmAywUhjeQbSslBZRZdeXl-LI-iqDU-CKV5sUyTLWxgYbhXoWsJpEqXNg/exec"; // ใส่ URL ของ Web App ที่ Deploy
+const API_URL = "https://script.google.com/macros/s/AKfycby9v3P1tIUUZa6pe8xdIrpmoH81AEVghK1X7vybjYq4_bf9cprg-5uExPMCup-wYiaX/exec"; // ใส่ URL ของ Web App ที่ Deploy
 const addresses = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
 const statuses = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
 
