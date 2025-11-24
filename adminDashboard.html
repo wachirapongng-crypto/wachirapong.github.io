@@ -4,35 +4,36 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Dashboard</title>
-<link rel="stylesheet" href="./css/dashborad.css"/>
+<link rel="stylesheet" href="./css/dashboard.css"/>
 </head>
 <body>
 
 <header>
-<h1>ระบบจัดการครุภัณฑ์ (Admin)</h1>
-<div class="header-right">
-  <div class="user-info">👤 <span id="username">Admin</span></div>
-  <button id="logout-btn">ออกจากระบบ</button>
-</div>
+  <h1>ระบบจัดการครุภัณฑ์ (Admin)</h1>
+  <div class="header-right">
+    <div class="user-info">👤 <span id="username">Admin</span></div>
+    <button id="logout-btn">ออกจากระบบ</button>
+  </div>
 </header>
 
-<main class="dashboard">
-  <div class="card" onclick="openForm('add')">➕ เพิ่มรายการครุภัณฑ์</div>
-  <div class="card" onclick="openForm('edit')">✏️ แก้ไขรายการครุภัณฑ์</div>
-  <div class="card" onclick="openForm('wait')">🕓 ครุภัณฑ์ที่รอตรวจสอบ</div>
-  <div class="card" onclick="openForm('report')">📊 ออกรายงานครุภัณฑ์</div>
-  <div class="card" onclick="openForm('list')">📋 รายการครุภัณฑ์ทั้งหมด</div>
-  <div class="card" onclick="openForm('manual')">📘 คู่มือการใช้งาน</div>
-  <div class="card" onclick="openForm('user')">👥 จัดการสมาชิก</div>
-</main>
+<div class="layout">
+  <!-- เมนูด้านซ้าย -->
+  <aside class="sidebar">
+    <button onclick="loadPage('add')">➕ เพิ่มรายการครุภัณฑ์</button>
+    <button onclick="loadPage('edit')">✏️ แก้ไขรายการครุภัณฑ์</button>
+    <button onclick="loadPage('wait')">🕓 ครุภัณฑ์ที่รอตรวจสอบ</button>
+    <button onclick="loadPage('report')">📊 ออกรายงานครุภัณฑ์</button>
+    <button onclick="loadPage('list')">📋 รายการครุภัณฑ์ทั้งหมด</button>
+    <button onclick="loadPage('manual')">📘 คู่มือการใช้งาน</button>
+    <button onclick="loadPage('user')">👥 จัดการสมาชิก</button>
+  </aside>
 
-<section id="form-section">
-  <div class="form-box">
-    <span class="close-btn">×</span>
-    <h2 id="form-title">ฟอร์ม</h2>
-    <div id="form-content"></div>
-  </div>
-</section>
+  <!-- ส่วนแสดงเนื้อหากลาง -->
+  <main class="content">
+    <h2 id="page-title">ยินดีต้อนรับ</h2>
+    <div id="page-content">เลือกเมนูจากด้านซ้ายเพื่อเริ่มใช้งาน</div>
+  </main>
+</div>
 
 <script src="dashboard.js"></script>
 </body>
