@@ -4,11 +4,72 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Dashboard</title>
-<link rel="stylesheet" href="./css/dashboard.css"/>
+<link rel="stylesheet" href="./css/dashborad.css"/>
+
+<style>
+/* ===== เพิ่มเติม: Slide Sidebar แบบตัวอย่าง ===== */
+.sidebar {
+  height: 100%;
+  width: 0;
+  position: fixed;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  background-color: #3c9afd;
+  overflow-x: hidden;
+  transition: 0.4s;
+  padding-top: 60px;
+}
+
+.sidebar button {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 12px 30px;
+  color: #ccc;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.sidebar button:hover {
+  color: #fff;
+}
+
+.sidebar .closebtn {
+  position: absolute;
+  top: 0;
+  right: 18px;
+  font-size: 40px;
+  color: white;
+  cursor: pointer;
+}
+
+.openbtn {
+  font-size: 22px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  margin-right: 10px;
+}
+
+.openbtn:hover {
+  background-color: #444;
+}
+
+#main {
+  transition: margin-left .4s;
+  padding: 16px;
+}
+</style>
 </head>
+
 <body>
 
 <header>
+  <button class="openbtn" onclick="openNav()">☰</button>
   <h1>ระบบจัดการครุภัณฑ์ (Admin)</h1>
   <div class="header-right">
     <div class="user-info">👤 <span id="username">Admin</span></div>
@@ -16,19 +77,21 @@
   </div>
 </header>
 
-<div class="layout">
-  <!-- เมนูด้านซ้าย -->
-  <aside class="sidebar">
-    <button onclick="loadPage('add')">➕ เพิ่มรายการครุภัณฑ์</button>
-    <button onclick="loadPage('edit')">✏️ แก้ไขรายการครุภัณฑ์</button>
-    <button onclick="loadPage('wait')">🕓 ครุภัณฑ์ที่รอตรวจสอบ</button>
-    <button onclick="loadPage('report')">📊 ออกรายงานครุภัณฑ์</button>
-    <button onclick="loadPage('list')">📋 รายการครุภัณฑ์ทั้งหมด</button>
-    <button onclick="loadPage('manual')">📘 คู่มือการใช้งาน</button>
-    <button onclick="loadPage('user')">👥 จัดการสมาชิก</button>
-  </aside>
+<!-- ===== Slide Sidebar ===== -->
+<div id="mySidebar" class="sidebar">
+  <a class="closebtn" onclick="closeNav()">×</a>
 
-  <!-- ส่วนแสดงเนื้อหากลาง -->
+  <button onclick="loadPage('add')">➕ เพิ่มรายการครุภัณฑ์</button>
+  <button onclick="loadPage('edit')">✏️ แก้ไขรายการครุภัณฑ์</button>
+  <button onclick="loadPage('wait')">🕓 ครุภัณฑ์ที่รอตรวจสอบ</button>
+  <button onclick="loadPage('report')">📊 ออกรายงานครุภัณฑ์</button>
+  <button onclick="loadPage('list')">📋 รายการครุภัณฑ์ทั้งหมด</button>
+  <button onclick="loadPage('manual')">📘 คู่มือการใช้งาน</button>
+  <button onclick="loadPage('user')">👥 จัดการสมาชิก</button>
+</div>
+
+<!-- ===== ส่วนแสดงเนื้อหา ===== -->
+<div id="main">
   <main class="content">
     <h2 id="page-title">ยินดีต้อนรับ</h2>
     <div id="page-content">เลือกเมนูจากด้านซ้ายเพื่อเริ่มใช้งาน</div>
@@ -36,5 +99,18 @@
 </div>
 
 <script src="dashboard.js"></script>
+
+<script>
+function openNav() {
+  document.getElementById("mySidebar").style.width = "260px";
+  document.getElementById("main").style.marginLeft = "260px";
+}
+
+function closeNav() {
+  document.getElementById("mySidebar").style.width = "0";
+  document.getElementById("main").style.marginLeft = "0";
+}
+</script>
+
 </body>
 </html>
