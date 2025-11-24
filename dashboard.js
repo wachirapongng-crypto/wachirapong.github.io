@@ -2,19 +2,18 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("username").textContent =
     localStorage.getItem("username") || "Admin";
   
+  const BASE = "https://script.google.com/macros/s/AKfycbxDzCr9tk4daOWYNdms5kP1XpkTJNBaylgKooli4XRVXWku24fB4Wr4Q3stKM8lrWsl/exec";
+
   const SHEET_URL = {
-    DATA: "https://script.google.com/macros/s/AKfycbyKfmT4sQmqDLm80EihmaQ5-ynSlPA5f3hIABVzIljaYzfWtj1S-nRPQKp8j0PWLTsH/exec?sheet=DATA",
-    WAIT: "https://script.google.com/macros/s/AKfycbyKfmT4sQmqDLm80EihmaQ5-ynSlPA5f3hIABVzIljaYzfWtj1S-nRPQKp8j0PWLTsH/exec?sheet=WAIT",
-    SHOW: "https://script.google.com/macros/s/AKfycbyKfmT4sQmqDLm80EihmaQ5-ynSlPA5f3hIABVzIljaYzfWtj1S-nRPQKp8j0PWLTsH/exec?sheet=SHOW",
-    LOGIN: "https://script.google.com/macros/s/AKfycbyKfmT4sQmqDLm80EihmaQ5-ynSlPA5f3hIABVzIljaYzfWtj1S-nRPQKp8j0PWLTsH/exec?sheet=LOGIN",
-    MEMBER: "https://script.google.com/macros/s/AKfycbyKfmT4sQmqDLm80EihmaQ5-ynSlPA5f3hIABVzIljaYzfWtj1S-nRPQKp8j0PWLTsH/exec?sheet=MEMBER"
+    DATA: `${BASE}?sheet=DATA`,
+    WAIT: `${BASE}?sheet=WAIT`,
+    SHOW: `${BASE}?sheet=SHOW`,
+    LOGIN: `${BASE}?sheet=LOGIN`,
+    MEMBER: `${BASE}?sheet=MEMBER`
   };
 
   const pageTitle = document.getElementById("page-title");
   const pageContent = document.getElementById("page-content");
-  const logoutBtn = document.getElementById("logout-btn");
-
-  logoutBtn.addEventListener("click", logout);
 
   const QR_COLUMNS = ["QR Code", "qr_code", "qr", "QR"];
 
@@ -27,29 +26,40 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/'/g, "&#039;");
   }
 
+  // =====================================================
+  // RENDER CELL
+  // =====================================================
   function renderCell(key, val, rowIndex) {
-    const roomList = ["501", "502", "503", "401", "401A", "401B", "401C", "402", "403", "404", "405", "ห้องพักครู", "301", "302"];
-    const statusList = ["ใช้งานได้", "ชำรุด", "เสื่อมสภาพ", "หมดอายุการใช้งาน", "ไม่รองรับการใช้งาน"];
+    const roomList = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
+    const statusList = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
 
     if (typeof val === "object" && val !== null) {
       if (val.v) val = val.v;
       else return JSON.stringify(val);
     }
 
-    if (QR_COLUMNS.includes(key) && val) {
+    if (QR_COLUMNS.includes(key)) {
       return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(val)}">`;
+    }
+
+    if (key === "เลือก") {
+      return `<input type="checkbox" class="wait-select" data-row="${rowIndex}">`;
+    }
+
+    if (key === "ลบ") {
+      return `<button class="delete-btn" data-row="${rowIndex}" style="color:red;">ลบ</button>`;
     }
 
     if (key === "ที่อยู่") {
       return `
-        <select class="room-select" data-row="${rowIndex}" data-col="${key}">
+        <select class="room-select" data-row="${rowIndex}">
           ${roomList.map(r => `<option value="${r}" ${val === r ? "selected" : ""}>${r}</option>`).join("")}
         </select>`;
     }
 
     if (key === "สถานะ") {
       return `
-        <select class="status-select" data-row="${rowIndex}" data-col="${key}">
+        <select class="status-select" data-row="${rowIndex}">
           ${statusList.map(s => `<option value="${s}" ${val === s ? "selected" : ""}>${s}</option>`).join("")}
         </select>`;
     }
@@ -57,10 +67,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return escapeHTML(val);
   }
 
-  // โหลดข้อมูลจากชีต
+  // =====================================================
+  // LOAD DATA
+  // =====================================================
   window.loadData = async function (sheet) {
+    const url = SHEET_URL[sheet];
     try {
-      const data = await fetchData(SHEET_URL[sheet]);
+      const res = await fetch(url);
+      const data = await res.json();
       pageContent.innerHTML = await renderTable(data, sheet);
     } catch (err) {
       console.error(err);
@@ -68,122 +82,135 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  async function fetchData(url) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return await res.json();
-    } catch (err) {
-      console.error("Fetch error:", err);
-      return [];
-    }
-  }
-
+  // =====================================================
+  // RENDER TABLE
+  // =====================================================
   async function renderTable(data, sheet) {
-    if (!Array.isArray(data) || data.length === 0)
+    if (!data || data.length === 0)
       return "<p>ไม่พบข้อมูล</p>";
 
     let table = "<table><tr>";
     const keys = Object.keys(data[0]);
-    keys.forEach(key => table += `<th>${escapeHTML(key)}</th>`);
+
+    // เพิ่มคอลัมน์ก่อนเรนเดอร์จริง
+    if (sheet === "WAIT") {
+      keys.unshift("เลือก");
+      keys.push("ลบ");
+    }
+
+    keys.forEach(k => table += `<th>${escapeHTML(k)}</th>`);
     table += "</tr>";
 
     data.forEach((row, i) => {
+      const rowNumber = i + 2; // index + header row
       table += "<tr>";
-      keys.forEach(key => {
-        table += `<td>${renderCell(key, row[key], i + 2)}</td>`;
+
+      keys.forEach(k => {
+        const val = row[k] || row[k] === 0 ? row[k] : row[k] === "" ? "" : row[k];
+        table += `<td>${renderCell(k, row[k] || row[k] === 0 ? row[k] : "", rowNumber)}</td>`;
       });
+
       table += "</tr>";
     });
+
+    // ปุ่มยืนยันด้านล่าง
+    if (sheet === "WAIT") {
+      table += `
+        <tr><td colspan="${keys.length}" style="text-align:right;">
+          <button id="confirm-wait" style="padding:10px 20px;background:#3b7cff;color:#fff;border:none;border-radius:6px;cursor:pointer;">
+            ✔ ยืนยันรายการที่เลือก
+          </button>
+        </td></tr>
+      `;
+    }
 
     return table + "</table>";
   }
 
-  // อัปเดตข้อมูลกลับ Google Sheets
+  // =====================================================
+  // ON SELECT CHANGE → UPDATE DATA
+  // =====================================================
   document.addEventListener("change", async (e) => {
     const el = e.target;
-    if (el.matches(".room-select, .status-select")) {
+
+    if (el.matches(".room-select") || el.matches(".status-select")) {
       const payload = {
-        sheet: "DATA",
-        row: el.dataset.row,
-        column: el.dataset.col,
-        value: el.value
+        sheet: "WAIT",
+        action: "update",
+        data: {
+          row: Number(el.dataset.row),
+          รหัส: el.closest("tr").children[1].innerText,
+          ชื่อ: el.closest("tr").children[2].innerText,
+          ที่อยู่: el.closest("tr").querySelector(".room-select").value,
+          สถานะ: el.closest("tr").querySelector(".status-select").value,
+          วันที่: el.closest("tr").children[5].innerText,
+          เวลา: el.closest("tr").children[6].innerText
+        }
       };
 
-      try {
-        await fetch(SHEET_URL.DATA, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-      } catch (err) {
-        console.error("อัปเดตไม่สำเร็จ:", err);
-      }
+      await fetch(BASE, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+      });
     }
   });
 
-  // โหลดเนื้อหาตามเมนู
+  // =====================================================
+  // DELETE BUTTON
+  // =====================================================
+  document.addEventListener("click", async (e) => {
+    if (e.target.matches(".delete-btn")) {
+      const row = Number(e.target.dataset.row);
+
+      await fetch(BASE, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          sheet: "WAIT",
+          action: "delete",
+          row
+        })
+      });
+
+      loadData("WAIT");
+    }
+  });
+
+  // =====================================================
+  // CONFIRM BUTTON → MOVE WAIT → LOG
+  // =====================================================
+  document.addEventListener("click", async (e) => {
+    if (e.target.id === "confirm-wait") {
+      const selected = [...document.querySelectorAll(".wait-select:checked")];
+
+      for (const chk of selected) {
+        const row = Number(chk.dataset.row);
+
+        await fetch(BASE, {
+          method: "POST",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify({
+            sheet: "WAIT",
+            action: "moveWait",
+            row
+          })
+        });
+      }
+
+      loadData("WAIT");
+    }
+  });
+
+  // =====================================================
+  // NAV
+  // =====================================================
   window.loadPage = async function (type) {
     pageContent.innerHTML = "";
 
-    switch (type) {
-      case "wait":
-        pageTitle.textContent = "🕓 ครุภัณฑ์ที่รอตรวจสอบ";
-        await loadData("WAIT");
-        break;
-
-      case "report":
-        pageTitle.textContent = "📊 ออกรายงาน";
-        pageContent.innerHTML = `
-          <label>เลือกเดือน/ปี:</label>
-          <input type="month" id="month">
-          <button onclick="loadReport()">แสดงรายงาน</button>
-          <div id="report-result"></div>`;
-        break;
-
-      case "list":
-        pageTitle.textContent = "📋 รายการครุภัณฑ์ทั้งหมด";
-        await loadData("DATA");
-        break;
-
-      case "manual":
-        pageTitle.textContent = "📘 คู่มือการใช้งาน";
-        pageContent.innerHTML = `
-          <p>1. เพิ่มรายการ → กรอกข้อมูลและบันทึก</p>
-          <p>2. แก้ไขรายการ → เลือกรายการ</p>
-          <p>3. รายการรอตรวจสอบ → ตรวจสอบจากเครื่องสแกน</p>
-          <p>4. ออกรายงาน → เลือกเดือน/ปี</p>
-          <p>5. จัดการสมาชิก → เพิ่ม/ลบ/แก้ไข</p>`;
-        break;
-
-      case "user":
-        pageTitle.textContent = "👥 จัดการสมาชิก";
-        await loadData("LOGIN");
-        break;
-
-      default:
-        pageTitle.textContent = "ยินดีต้อนรับ";
-        pageContent.innerHTML = "เลือกเมนูจากด้านซ้ายเพื่อเริ่มใช้งาน";
-    }
-  };
-
-  function logout() {
-    localStorage.removeItem("username");
-    window.location.href = "login.html";
-  }
-
-  window.loadReport = async function () {
-    const month = document.getElementById("month").value;
-    if (!month) return alert("เลือกเดือนก่อน");
-
-    const reportDiv = document.getElementById("report-result");
-    reportDiv.innerHTML = "กำลังโหลด...";
-
-    try {
-      const data = await fetchData(SHEET_URL.SHOW + "&month=" + encodeURIComponent(month));
-      reportDiv.innerHTML = await renderTable(data);
-    } catch (err) {
-      reportDiv.innerHTML = "<p style='color:red;'>โหลดรายงานไม่ได้</p>";
+    if (type === "wait") {
+      pageTitle.textContent = "🕓 ครุภัณฑ์ที่รอตรวจสอบ";
+      await loadData("WAIT");
     }
   };
 });
