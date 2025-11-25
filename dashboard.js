@@ -17,6 +17,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const QR_COLUMNS = ["QR Code", "qr_code", "qr", "QR"];
 
+  // =====================================================
+  // SAFE CORS FETCH
+  // =====================================================
+  async function fetchCORS(url, options = {}) {
+    const opt = {
+      method: options.method || "GET",
+      mode: "cors",
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined
+    };
+
+    const res = await fetch(url, opt);
+    const text = await res.text();
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      console.warn("GAS returned non-JSON:", text);
+      return {};
+    }
+  }
+
   function escapeHTML(str) {
     return str?.toString()
       .replace(/&/g, "&amp;")
@@ -68,13 +93,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =====================================================
-  // LOAD DATA
+  // LOAD DATA (GET)
   // =====================================================
   window.loadData = async function (sheet) {
     const url = SHEET_URL[sheet];
     try {
-      const res = await fetch(url);
-      const data = await res.json();
+      const data = await fetchCORS(url);
       pageContent.innerHTML = await renderTable(data, sheet);
     } catch (err) {
       console.error(err);
@@ -92,7 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let table = "<table><tr>";
     const keys = Object.keys(data[0]);
 
-    // เพิ่มคอลัมน์ก่อนเรนเดอร์จริง
     if (sheet === "WAIT") {
       keys.unshift("เลือก");
       keys.push("ลบ");
@@ -102,18 +125,17 @@ document.addEventListener("DOMContentLoaded", () => {
     table += "</tr>";
 
     data.forEach((row, i) => {
-      const rowNumber = i + 2; // index + header row
+      const rowNumber = i + 2;
       table += "<tr>";
 
       keys.forEach(k => {
-        const val = row[k] || row[k] === 0 ? row[k] : row[k] === "" ? "" : row[k];
-        table += `<td>${renderCell(k, row[k] || row[k] === 0 ? row[k] : "", rowNumber)}</td>`;
+        const val = row[k] || row[k] === 0 ? row[k] : "";
+        table += `<td>${renderCell(k, val, rowNumber)}</td>`;
       });
 
       table += "</tr>";
     });
 
-    // ปุ่มยืนยันด้านล่าง
     if (sheet === "WAIT") {
       table += `
         <tr><td colspan="${keys.length}" style="text-align:right;">
@@ -128,7 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =====================================================
-  // ON SELECT CHANGE → UPDATE DATA
+  // ON SELECT CHANGE → UPDATE
   // =====================================================
   document.addEventListener("change", async (e) => {
     const el = e.target;
@@ -148,29 +170,27 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       };
 
-      await fetch(BASE, {
+      await fetchCORS(BASE, {
         method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(payload)
+        body: payload
       });
     }
   });
 
   // =====================================================
-  // DELETE BUTTON
+  // DELETE
   // =====================================================
   document.addEventListener("click", async (e) => {
     if (e.target.matches(".delete-btn")) {
       const row = Number(e.target.dataset.row);
 
-      await fetch(BASE, {
+      await fetchCORS(BASE, {
         method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({
+        body: {
           sheet: "WAIT",
           action: "delete",
           row
-        })
+        }
       });
 
       loadData("WAIT");
@@ -178,7 +198,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // =====================================================
-  // CONFIRM BUTTON → MOVE WAIT → LOG
+  // CONFIRM → MOVE WAIT
   // =====================================================
   document.addEventListener("click", async (e) => {
     if (e.target.id === "confirm-wait") {
@@ -187,14 +207,13 @@ document.addEventListener("DOMContentLoaded", () => {
       for (const chk of selected) {
         const row = Number(chk.dataset.row);
 
-        await fetch(BASE, {
+        await fetchCORS(BASE, {
           method: "POST",
-          headers: { "Content-Type":"application/json" },
-          body: JSON.stringify({
+          body: {
             sheet: "WAIT",
             action: "moveWait",
             row
-          })
+          }
         });
       }
 
