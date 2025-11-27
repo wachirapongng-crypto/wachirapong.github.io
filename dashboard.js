@@ -18,26 +18,26 @@ document.addEventListener("DOMContentLoaded", () => {
   // =====================================================
   // SAFE CORS FETCH (เวอร์ชันใหม่ — ไม่ตั้ง Content-Type เอง)
   // =====================================================
-  async function fetchCORS(url, options = {}) {
-    const opt = {
-      method: options.method || "GET",
-      // ปล่อย browser จัดการ mode เองก็ได้
-      // mode: "cors",
-      headers: {
-        ...(options.headers || {})
-      },
-      body: options.body || undefined
-    };
+ async function fetchCORS(url, options = {}) {
+  const opt = {
+    method: options.method || "GET",
+    // ไม่ต้องเซ็ต Content-Type เอง ปล่อย browser จัดการเวลาใช้ FormData
+    headers: {
+      ...(options.headers || {})
+    },
+    body: options.body || undefined
+  };
 
-    const res = await fetch(url, opt);
-    const text = await res.text();
-    try {
-      return JSON.parse(text);
-    } catch {
-      console.warn("GAS returned non-JSON:", text);
-      return {};
-    }
+  const res = await fetch(url, opt);
+  const text = await res.text();
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    console.warn("GAS returned non-JSON:", text);
+    return {};
   }
+}
 
   function escapeHTML(str) {
     return str?.toString()
@@ -141,76 +141,76 @@ document.addEventListener("DOMContentLoaded", () => {
   // =====================================================
   // ON SELECT CHANGE → UPDATE (ใช้ FormData)
   // =====================================================
-  document.addEventListener("change", async (e) => {
-    const el = e.target;
-    if (el.matches(".room-select") || el.matches(".status-select")) {
-      const payload = {
-        row: Number(el.dataset.row),
-        รหัส: el.closest("tr").children[1].innerText,
-        ชื่อ: el.closest("tr").children[2].innerText,
-        ที่อยู่: el.closest("tr").querySelector(".room-select").value,
-        สถานะ: el.closest("tr").querySelector(".status-select").value,
-        วันที่: el.closest("tr").children[5].innerText,
-        เวลา: el.closest("tr").children[6].innerText
-      };
+ document.addEventListener("change", async (e) => {
+  const el = e.target;
+  if (el.matches(".room-select") || el.matches(".status-select")) {
+    const payload = {
+      row: Number(el.dataset.row),
+      รหัส: el.closest("tr").children[1].innerText,
+      ชื่อ: el.closest("tr").children[2].innerText,
+      ที่อยู่: el.closest("tr").querySelector(".room-select").value,
+      สถานะ: el.closest("tr").querySelector(".status-select").value,
+      วันที่: el.closest("tr").children[5].innerText,
+      เวลา: el.closest("tr").children[6].innerText
+    };
 
-      const form = new FormData();
-      form.append("sheet", "WAIT");
-      form.append("action", "update");
-      form.append("row", String(payload.row));
-      form.append("data", JSON.stringify(payload));
+    const form = new FormData();
+    form.append("sheet", "WAIT");
+    form.append("action", "update");
+    form.append("row", String(payload.row));
+    form.append("data", JSON.stringify(payload));
 
-      await fetchCORS(BASE, {
-        method: "POST",
-        body: form
-      });
-    }
-  });
+    await fetchCORS(BASE, {
+      method: "POST",
+      body: form
+    });
+  }
+});
 
   // =====================================================
   // DELETE (ใช้ FormData)
   // =====================================================
   document.addEventListener("click", async (e) => {
-    if (e.target.matches(".delete-btn")) {
-      const row = Number(e.target.dataset.row);
+  if (e.target.matches(".delete-btn")) {
+    const row = Number(e.target.dataset.row);
+
+    const form = new FormData();
+    form.append("sheet", "WAIT");
+    form.append("action", "delete");
+    form.append("row", String(row));
+
+    await fetchCORS(BASE, {
+      method: "POST",
+      body: form
+    });
+
+    loadData("WAIT");
+  }
+});
+
+  // =====================================================
+  // CONFIRM → MOVE WAIT (ใช้ FormData)
+  // =====================================================
+  document.addEventListener("click", async (e) => {
+  if (e.target.id === "confirm-wait") {
+    const selected = [...document.querySelectorAll(".wait-select:checked")];
+    for (const chk of selected) {
+      const row = Number(chk.dataset.row);
 
       const form = new FormData();
       form.append("sheet", "WAIT");
-      form.append("action", "delete");
+      form.append("action", "moveWait");
       form.append("row", String(row));
 
       await fetchCORS(BASE, {
         method: "POST",
         body: form
       });
-
-      loadData("WAIT");
     }
-  });
+    loadData("WAIT");
+  }
+});
 
-  // =====================================================
-  // CONFIRM → MOVE WAIT (ใช้ FormData)
-  // =====================================================
-  document.addEventListener("click", async (e) => {
-    if (e.target.id === "confirm-wait") {
-      const selected = [...document.querySelectorAll(".wait-select:checked")];
-
-      for (const chk of selected) {
-        const row = Number(chk.dataset.row);
-
-        const form = new FormData();
-        form.append("sheet", "WAIT");
-        form.append("action", "moveWait");
-        form.append("row", String(row));
-
-        await fetchCORS(BASE, {
-          method: "POST",
-          body: form
-        });
-      }
-      loadData("WAIT");
-    }
-  });
 
   // =====================================================
   // NAV
