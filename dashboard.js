@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.getItem("username") || "Admin";
   
   const BASE = "https://script.google.com/macros/s/AKfycbxZI15GWSiWsKJWdFWaO9qnL4ZziE4mb4WOIdFC1SRiGV4XTJwy91B6kn3f67zv3SNN/exec";
-
   const SHEET_URL = {
     DATA: `${BASE}?sheet=DATA`,
     WAIT: `${BASE}?sheet=WAIT`,
@@ -14,26 +13,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const pageTitle = document.getElementById("page-title");
   const pageContent = document.getElementById("page-content");
-
   const QR_COLUMNS = ["QR Code", "qr_code", "qr", "QR"];
 
   // =====================================================
-  // SAFE CORS FETCH
+  // SAFE CORS FETCH (เวอร์ชันใหม่ — ไม่ตั้ง Content-Type เอง)
   // =====================================================
   async function fetchCORS(url, options = {}) {
     const opt = {
       method: options.method || "GET",
-      mode: "cors",
+      // ปล่อย browser จัดการ mode เองก็ได้
+      // mode: "cors",
       headers: {
-        "Content-Type": "application/json",
-        ...options.headers
+        ...(options.headers || {})
       },
-      body: options.body ? JSON.stringify(options.body) : undefined
+      body: options.body || undefined
     };
 
     const res = await fetch(url, opt);
     const text = await res.text();
-
     try {
       return JSON.parse(text);
     } catch {
@@ -66,29 +63,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (QR_COLUMNS.includes(key)) {
       return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(val)}">`;
     }
-
     if (key === "เลือก") {
       return `<input type="checkbox" class="wait-select" data-row="${rowIndex}">`;
     }
-
     if (key === "ลบ") {
       return `<button class="delete-btn" data-row="${rowIndex}" style="color:red;">ลบ</button>`;
     }
-
     if (key === "ที่อยู่") {
       return `
         <select class="room-select" data-row="${rowIndex}">
           ${roomList.map(r => `<option value="${r}" ${val === r ? "selected" : ""}>${r}</option>`).join("")}
         </select>`;
     }
-
     if (key === "สถานะ") {
       return `
         <select class="status-select" data-row="${rowIndex}">
           ${statusList.map(s => `<option value="${s}" ${val === s ? "selected" : ""}>${s}</option>`).join("")}
         </select>`;
     }
-
     return escapeHTML(val);
   }
 
@@ -98,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.loadData = async function (sheet) {
     const url = SHEET_URL[sheet];
     try {
-      const data = await fetchCORS(url);
+      const data = await fetchCORS(url);  // GET ธรรมดา
       pageContent.innerHTML = await renderTable(data, sheet);
     } catch (err) {
       console.error(err);
@@ -125,14 +117,12 @@ document.addEventListener("DOMContentLoaded", () => {
     table += "</tr>";
 
     data.forEach((row, i) => {
-      const rowNumber = i + 2;
+      const rowNumber = i + 2; // ชดเชย header row ในชีต
       table += "<tr>";
-
       keys.forEach(k => {
         const val = row[k] || row[k] === 0 ? row[k] : "";
         table += `<td>${renderCell(k, val, rowNumber)}</td>`;
       });
-
       table += "</tr>";
     });
 
@@ -145,52 +135,53 @@ document.addEventListener("DOMContentLoaded", () => {
         </td></tr>
       `;
     }
-
     return table + "</table>";
   }
 
   // =====================================================
-  // ON SELECT CHANGE → UPDATE
+  // ON SELECT CHANGE → UPDATE (ใช้ FormData)
   // =====================================================
   document.addEventListener("change", async (e) => {
     const el = e.target;
-
     if (el.matches(".room-select") || el.matches(".status-select")) {
       const payload = {
-        sheet: "WAIT",
-        action: "update",
-        data: {
-          row: Number(el.dataset.row),
-          รหัส: el.closest("tr").children[1].innerText,
-          ชื่อ: el.closest("tr").children[2].innerText,
-          ที่อยู่: el.closest("tr").querySelector(".room-select").value,
-          สถานะ: el.closest("tr").querySelector(".status-select").value,
-          วันที่: el.closest("tr").children[5].innerText,
-          เวลา: el.closest("tr").children[6].innerText
-        }
+        row: Number(el.dataset.row),
+        รหัส: el.closest("tr").children[1].innerText,
+        ชื่อ: el.closest("tr").children[2].innerText,
+        ที่อยู่: el.closest("tr").querySelector(".room-select").value,
+        สถานะ: el.closest("tr").querySelector(".status-select").value,
+        วันที่: el.closest("tr").children[5].innerText,
+        เวลา: el.closest("tr").children[6].innerText
       };
+
+      const form = new FormData();
+      form.append("sheet", "WAIT");
+      form.append("action", "update");
+      form.append("row", String(payload.row));
+      form.append("data", JSON.stringify(payload));
 
       await fetchCORS(BASE, {
         method: "POST",
-        body: payload
+        body: form
       });
     }
   });
 
   // =====================================================
-  // DELETE
+  // DELETE (ใช้ FormData)
   // =====================================================
   document.addEventListener("click", async (e) => {
     if (e.target.matches(".delete-btn")) {
       const row = Number(e.target.dataset.row);
 
+      const form = new FormData();
+      form.append("sheet", "WAIT");
+      form.append("action", "delete");
+      form.append("row", String(row));
+
       await fetchCORS(BASE, {
         method: "POST",
-        body: {
-          sheet: "WAIT",
-          action: "delete",
-          row
-        }
+        body: form
       });
 
       loadData("WAIT");
@@ -198,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // =====================================================
-  // CONFIRM → MOVE WAIT
+  // CONFIRM → MOVE WAIT (ใช้ FormData)
   // =====================================================
   document.addEventListener("click", async (e) => {
     if (e.target.id === "confirm-wait") {
@@ -207,16 +198,16 @@ document.addEventListener("DOMContentLoaded", () => {
       for (const chk of selected) {
         const row = Number(chk.dataset.row);
 
+        const form = new FormData();
+        form.append("sheet", "WAIT");
+        form.append("action", "moveWait");
+        form.append("row", String(row));
+
         await fetchCORS(BASE, {
           method: "POST",
-          body: {
-            sheet: "WAIT",
-            action: "moveWait",
-            row
-          }
+          body: form
         });
       }
-
       loadData("WAIT");
     }
   });
@@ -226,10 +217,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // =====================================================
   window.loadPage = async function (type) {
     pageContent.innerHTML = "";
-
     if (type === "wait") {
       pageTitle.textContent = "🕓 ครุภัณฑ์ที่รอตรวจสอบ";
       await loadData("WAIT");
     }
+    // ถ้าจะเพิ่มหน้าอื่น (DATA/SHOW) ก็ขยายตรงนี้ได้เลย
   };
 });
