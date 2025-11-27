@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("username").textContent =
     localStorage.getItem("username") || "Admin";
   
-  const BASE = "https://script.google.com/macros/s/AKfycbxZI15GWSiWsKJWdFWaO9qnL4ZziE4mb4WOIdFC1SRiGV4XTJwy91B6kn3f67zv3SNN/exec";
+  const BASE = "https://script.google.com/macros/s/AKfycbyGsw_HOthoi9t-5Qnh9k8_idaInsg562sAa36bq-dvisHU_LMnmiiKRF58OdsAFySERw/exec";
   const SHEET_URL = {
     DATA: `${BASE}?sheet=DATA`,
     WAIT: `${BASE}?sheet=WAIT`,
