@@ -216,3 +216,7 @@ header h1 {
   .form-actions { flex-direction: column; }
   .form-actions button { width: 100%; margin-bottom: 8px; }
 }
+.barcode {
+    font-family: 'Libre Barcode 39', cursive;
+    font-size: 48px;
+  }
