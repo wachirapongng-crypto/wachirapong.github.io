@@ -34,11 +34,9 @@ header h1 {
   cursor: pointer;
   transition: 0.3s;
 }
-#logout-btn:hover {
-  background: #e60000;
-}
+#logout-btn:hover { background: #e60000; }
 
-/* ============ SLIDE-IN SIDEBAR ============ */
+/* ============ SIDEBAR ============ */
 .sidebar {
   height: 100%;
   width: 0;
@@ -51,7 +49,6 @@ header h1 {
   transition: 0.35s;
   padding-top: 70px;
 }
-
 .sidebar button {
   width: 100%;
   background: none;
@@ -63,10 +60,7 @@ header h1 {
   cursor: pointer;
   transition: 0.2s;
 }
-.sidebar button:hover {
-  color: #fff;
-}
-
+.sidebar button:hover { color: #fff; }
 .sidebar .closebtn {
   position: absolute;
   top: 10px;
@@ -86,18 +80,15 @@ header h1 {
   border: none;
   border-radius: 6px;
 }
-.openbtn:hover {
-  background-color: #0056b3;
-}
+.openbtn:hover { background-color: #0056b3; }
 
-/* ============ CONTENT ============ */
+/* ============ MAIN CONTENT ============ */
 #main {
   transition: margin-left 0.35s;
   padding: 20px;
   height: calc(100vh - 60px);
   overflow-y: auto;
 }
-
 .content-box {
   background: white;
   border-radius: 12px;
@@ -106,6 +97,7 @@ header h1 {
   animation: fadeIn 0.2s;
 }
 
+/* ============ FORMS & BUTTONS ============ */
 .content-box input,
 .content-box select,
 .content-box button {
@@ -122,35 +114,70 @@ header h1 {
   cursor: pointer;
   transition: 0.3s;
 }
-.content-box button:hover {
-  background: #0056b3;
-}
+.content-box button:hover { background: #0056b3; }
 
 /* ============ TABLE ============ */
-table {
+.dash-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 10px;
+  margin-top: 15px;
   background: white;
 }
-th, td {
+.dash-table th, .dash-table td {
   border: 1px solid #ccc;
   padding: 8px;
   text-align: center;
+  vertical-align: middle;
 }
-th {
+.dash-table th {
   background: #007bff;
   color: white;
 }
-
-/* ============ ANIMATION ============ */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+.dash-table img {
+  max-height: 60px;
 }
 
-/* Dashboard popup (คุณมีใช้อยู่ เลยจัดรวมให้เรียบร้อย) */
-#dashboard-popup {
+/* ============ TABLE ACTIONS ============ */
+.table-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+.table-actions .btn { width: auto; padding: 6px 14px; }
+
+/* ============ MODAL ============ */
+.modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.modal-content {
+  background: white;
+  padding: 20px 25px;
+  border-radius: 12px;
+  width: 320px;
+  max-width: 90%;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  animation: fadeIn 0.25s ease-out;
+}
+.modal-content h3 { margin-top: 0; text-align: center; }
+.modal-content label { display: block; margin: 10px 0; font-size: 0.95rem; }
+.modal-content input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; }
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+.form-actions button { width: 48%; }
+
+/* ============ POPUP ============ */
+.popup {
   position: fixed;
   left: 50%;
   transform: translateX(-50%) translateY(-20px);
@@ -160,12 +187,12 @@ th {
   transition: all .28s ease;
   pointer-events: none;
 }
-#dashboard-popup.visible {
+.popup.visible {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
   pointer-events: auto;
 }
-#dashboard-popup .popup-msg {
+.popup .popup-msg {
   background: #111;
   color: #fff;
   padding: 14px 18px;
@@ -174,5 +201,18 @@ th {
   min-width: 160px;
   text-align: center;
 }
-#dashboard-popup.ok .popup-msg { background:#2a9d8f; }
-#dashboard-popup.err .popup-msg { background:#e63946; }
+.popup.ok .popup-msg { background:#2a9d8f; }
+.popup.err .popup-msg { background:#e63946; }
+
+/* ============ ANIMATION ============ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 600px){
+  .table-actions { flex-direction: column; align-items: stretch; }
+  .form-actions { flex-direction: column; }
+  .form-actions button { width: 100%; margin-bottom: 8px; }
+}
