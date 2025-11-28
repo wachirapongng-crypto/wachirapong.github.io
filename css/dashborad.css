@@ -133,3 +133,101 @@ th {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+.sidebar {
+  height: 100%;
+  width: 0;
+  position: fixed;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  background-color: #3c9afd;
+  overflow-x: hidden;
+  transition: 0.4s;
+  padding-top: 60px;
+}
+
+.sidebar button {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 12px 30px;
+  color: #ccc;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.sidebar button:hover {
+  color: #fff;
+}
+
+.sidebar .closebtn {
+  position: absolute;
+  top: 0;
+  right: 18px;
+  font-size: 40px;
+  color: white;
+  cursor: pointer;
+}
+
+.openbtn {
+  font-size: 22px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  margin-right: 10px;
+}
+
+.openbtn:hover {
+  background-color: #444;
+}
+
+#main {
+  transition: margin-left .4s;
+  padding: 16px;
+}
+/* dashboard.css (เบื้องต้น) */
+body { font-family: system-ui, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial; margin:0; padding:0; background:#f6f8fb; color:#222; }
+header { display:flex; align-items:center; justify-content:space-between; padding:12px 18px; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.06); position:sticky; top:0; z-index:3; }
+header h1 { margin:0; font-size:18px; }
+.header-right { display:flex; align-items:center; gap:12px; }
+.openbtn { border-radius:6px; }
+.content { padding:18px; }
+
+/* note */
+.note { background:#fffbe6; border:1px solid #ffe8a6; padding:10px; border-radius:6px; margin-bottom:12px; color:#665100; }
+
+/* tables */
+.dash-table { width:100%; border-collapse:collapse; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.04); border-radius:6px; overflow:hidden; }
+.dash-table th, .dash-table td { padding:10px 12px; border-bottom:1px solid #efefef; text-align:left; font-size:14px; }
+.dash-table thead th { background:#f3f6fb; font-weight:600; }
+.table-actions { margin:10px 0; text-align:right; }
+
+/* buttons */
+.btn { padding:8px 12px; border-radius:6px; border:1px solid #ccd1d9; background:#fff; cursor:pointer; margin-left:8px; }
+.btn.primary { background:#3b7cff; color:#fff; border:0; }
+.form-actions { margin-top:12px; display:flex; gap:8px; }
+
+/* form */
+.dash-form label { display:block; margin-bottom:8px; }
+.dash-form input[type="text"], .dash-form input[type="password"], .dash-form select { width:100%; padding:8px; border-radius:6px; border:1px solid #ddd; box-sizing:border-box; }
+
+/* popup */
+#dashboard-popup { position:fixed; left:50%; transform:translateX(-50%) translateY(-20px); top:18%; z-index:9999; opacity:0; transition:all .28s ease; pointer-events:none; }
+#dashboard-popup.visible { transform:translateX(-50%) translateY(0); opacity:1; pointer-events:auto; }
+#dashboard-popup .popup-msg { background:#111; color:#fff; padding:14px 18px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.15); min-width:160px; text-align:center; }
+#dashboard-popup.ok .popup-msg { background:#2a9d8f; }
+#dashboard-popup.err .popup-msg { background:#e63946; }
+
+/* modal */
+.modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.4); z-index:9998; }
+.modal .modal-content { background:#fff; padding:18px; border-radius:8px; min-width:320px; max-width:640px; box-shadow:0 10px 30px rgba(0,0,0,.15); }
+.modal .modal-content h3 { margin-top:0; }
+
+/* responsive */
+@media (max-width:720px) {
+  .dash-table th, .dash-table td { padding:8px; font-size:13px; }
+  header h1 { font-size:16px; }
+}
