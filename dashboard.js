@@ -1,5 +1,5 @@
 /***************************************************
- * SECTION 0 — CONFIG & HELPERS
+ * dashboard.js — Updated
  ***************************************************/
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -17,52 +17,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function fetchJSON(url, method = "GET", body = null) {
     try {
-      const opt = method === "POST"
-        ? { method: "POST", body }
-        : { method: "GET" };
-
+      const opt = method === "POST" ? { method: "POST", body } : { method: "GET" };
       const res = await fetch(url, opt);
       const text = await res.text();
-
-      try {
-        return JSON.parse(text);
-      } catch {
-        return [];
-      }
+      try { return JSON.parse(text); } catch { return []; }
     } catch (err) {
       console.error(err);
       return [];
     }
   }
 
-  /* ---------- Loader popup แทน alert ---------- */
-  function popup(message="กำลังโหลด...", callback=null) {
+  /* ---------- Loader ---------- */
+  async function showLoader(message="กำลังประมวลผล...") {
     const loader = document.getElementById("loader");
-    if (!loader) { if(callback) callback(); return; }
-
-    loader.innerHTML = `<div class="loader-spinner"></div><p style="color:#fff;margin-top:12px;">${message}</p>`;
+    loader.innerHTML = `<div class="loader-spinner"></div><p>${message}</p>`;
     loader.style.display = "flex";
+    await new Promise(resolve => setTimeout(resolve, 200)); // ให้ loader render ก่อน fetch
+  }
 
-    return () => { // callback หลัง loader ปิด
-      loader.style.display = "none";
-      if (callback) callback();
-    };
+  function hideLoader() {
+    const loader = document.getElementById("loader");
+    loader.style.display = "none";
   }
 
   function formatDate(d) {
     const dt = new Date(d);
     if (isNaN(dt)) return d;
-    return `${dt.getDate().toString().padStart(2, "0")}-${(dt.getMonth()+1)
-      .toString().padStart(2,"0")}-${dt.getFullYear() + 543}`;
+    return `${dt.getDate().toString().padStart(2,"0")}-${(dt.getMonth()+1).toString().padStart(2,"0")}-${dt.getFullYear()+543}`;
   }
 
-
-/***************************************************
- * SECTION 1 — ROUTER
- ***************************************************/
-  window.loadPage = async function (page) {
+  /***************************************************
+   * ROUTER
+   ***************************************************/
+  async function loadPage(page) {
     pageContent.innerHTML = "";
-
     if (page === "wait") {
       pageTitle.textContent = "🕓 ครุภัณฑ์ที่รอตรวจสอบ";
       await renderWaitPage();
@@ -87,17 +75,19 @@ document.addEventListener("DOMContentLoaded", () => {
       pageTitle.textContent = "Dashboard";
       pageContent.innerHTML = "<p>เลือกเมนูด้านซ้าย</p>";
     }
-  };
+  }
 
-  // โหลดหน้าเริ่มต้นเป็น wait
-  loadPage("wait");
+  window.loadPage = loadPage; // export globally
+  loadPage("wait"); // โหลดหน้า wait เป็น default
 
-
-/***************************************************
- * SECTION 2 — WAIT PAGE (รอตรวจสอบ)
- ***************************************************/
+  /***************************************************
+   * WAIT PAGE
+   ***************************************************/
   async function renderWaitPage() {
     const data = await fetchJSON(URLS.WAIT);
+
+    const LOCATIONS = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
+    const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
 
     let html = `
       <button id="refresh-wait" class="btn">รีเฟรช</button>
@@ -109,40 +99,36 @@ document.addEventListener("DOMContentLoaded", () => {
             <th>ที่อยู่</th>
             <th>สถานะ</th>
             <th>หมายเหตุ</th>
+            <th>วันที่</th>
+            <th>เวลา</th>
             <th>ย้ายเข้ารายงาน</th>
             <th>ลบ</th>
           </tr>
-        </thead>
-        <tbody>
+        </thead><tbody>
     `;
 
-    const LOCATIONS = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
-    const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
-
-    data.forEach((r, i) => {
-      const row = i + 2;
-
+    data.forEach((r,i)=>{
+      const row = i+2;
       html += `
-        <tr data-row="${row}">
-          <td>${r["รหัส"]}</td>
-          <td>${r["ชื่อ"]}</td>
-
-          <td>
-            <select class="wait-loc">
-              ${LOCATIONS.map(v => `<option value="${v}" ${v === r["ที่อยู่"] ? "selected" : ""}>${v}</option>`).join("")}
-            </select>
-          </td>
-
-          <td>
-            <select class="wait-status">
-              ${STATUS.map(v => `<option value="${v}" ${v === r["สถานะ"] ? "selected" : ""}>${v}</option>`).join("")}
-            </select>
-          </td>
-
-          <td><input class="wait-note" placeholder="รายละเอียดเพิ่มเติม"></td>
-          <td><button class="btn move-log">✔</button></td>
-          <td><button class="btn del-wait">🗑</button></td>
-        </tr>`;
+      <tr data-row="${row}">
+        <td>${r["รหัส"]}</td>
+        <td>${r["ชื่อ"]}</td>
+        <td>
+          <select class="wait-loc">
+            ${LOCATIONS.map(v=>`<option value="${v}" ${v===r["ที่อยู่"]?"selected":""}>${v}</option>`).join("")}
+          </select>
+        </td>
+        <td>
+          <select class="wait-status">
+            ${STATUS.map(v=>`<option value="${v}" ${v===r["สถานะ"]?"selected":""}>${v}</option>`).join("")}
+          </select>
+        </td>
+        <td><input class="wait-note" value="${r["หมายเหตุ"] || ""}" placeholder="รายละเอียดเพิ่มเติม"></td>
+        <td>${r["วันที่"]}</td>
+        <td>${r["เวลา"]}</td>
+        <td><button class="btn move-log">✔</button></td>
+        <td><button class="btn del-wait">🗑</button></td>
+      </tr>`;
     });
 
     html += "</tbody></table>";
@@ -150,69 +136,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("refresh-wait").onclick = renderWaitPage;
 
-    document.querySelectorAll(".move-log").forEach(btn => {
-      btn.onclick = async function () {
+    document.querySelectorAll(".move-log").forEach(btn=>{
+      btn.onclick = async function(){
         const tr = this.closest("tr");
         const row = tr.dataset.row;
 
-        const loc = tr.querySelector(".wait-loc").value;
-        const status = tr.querySelector(".wait-status").value;
-        const note = tr.querySelector(".wait-note").value;
-
-        const now = new Date();
-
-        // ดึงค่าที่มีอยู่จาก WAIT: รหัส, ชื่อ, วันที่, เวลา
-        const code = tr.children[0].innerText;
-        const name = tr.children[1].innerText;
-        const date = data[row-2]["วันที่"] || formatDate(now);
-        const time = data[row-2]["เวลา"] || now.toLocaleTimeString("th-TH");
-
+        await showLoader("กำลังบันทึกลง LOG...");
         const body = new FormData();
-        body.append("sheet", "LOG");
-        body.append("action", "add");
-        body.append("code", code);
-        body.append("name", name);
-        body.append("loc", loc);
-        body.append("status", status);
-        body.append("note", note);
-        body.append("date", date);
-        body.append("time", time);
+        body.append("sheet","LOG");
+        body.append("action","add");
+        body.append("code", tr.children[0].innerText);
+        body.append("name", tr.children[1].innerText);
+        body.append("loc", tr.querySelector(".wait-loc").value);
+        body.append("status", tr.querySelector(".wait-status").value);
+        body.append("note", tr.querySelector(".wait-note").value);
+        body.append("date", tr.children[5].innerText);
+        body.append("time", tr.children[6].innerText);
 
-        const done = popup("กำลังย้ายไป LOG...");
-        await fetchJSON(BASE + "?sheet=LOG&action=add", "POST", body);
-        done();
+        await fetchJSON(BASE + "?sheet=LOG&action=add","POST",body);
 
         // ลบ WAIT
-        const delBody = new FormData();
-        delBody.append("sheet", "WAIT");
-        delBody.append("action", "delete");
-        delBody.append("row", row);
-        const delDone = popup("กำลังลบจาก WAIT...");
-        await fetchJSON(BASE, "POST", delBody);
-        delDone(() => renderWaitPage());
+        const del = new FormData();
+        del.append("sheet","WAIT");
+        del.append("action","delete");
+        del.append("row",row);
+        await fetchJSON(BASE,"POST",del);
+
+        hideLoader();
+        await renderWaitPage();
       };
     });
 
-    document.querySelectorAll(".del-wait").forEach(btn => {
-      btn.onclick = async function () {
+    document.querySelectorAll(".del-wait").forEach(btn=>{
+      btn.onclick = async function(){
         const row = this.closest("tr").dataset.row;
-
+        await showLoader("กำลังลบ...");
         const body = new FormData();
-        body.append("sheet", "WAIT");
-        body.append("action", "delete");
-        body.append("row", row);
-
-        const done = popup("กำลังลบ...");
-        await fetchJSON(BASE, "POST", body);
-        done(() => renderWaitPage());
+        body.append("sheet","WAIT");
+        body.append("action","delete");
+        body.append("row",row);
+        await fetchJSON(BASE,"POST",body);
+        hideLoader();
+        await renderWaitPage();
       };
     });
   }
 
-
-/***************************************************
- * SECTION 3 — LIST PAGE
- ***************************************************/
+  /***************************************************
+   * LIST PAGE
+   ***************************************************/
   async function renderListPage() {
     const data = await fetchJSON(URLS.DATA);
 
@@ -224,7 +196,6 @@ document.addEventListener("DOMContentLoaded", () => {
         <button id="add-item" class="btn">เพิ่ม</button>
       </div>
       <hr>
-
       <table class="dash-table">
         <thead>
           <tr>
@@ -240,82 +211,73 @@ document.addEventListener("DOMContentLoaded", () => {
         <tbody>
     `;
 
-    data.forEach((r, i) => {
-      const row = i + 2;
-
-      html += `
-        <tr data-row="${row}">
-          <td>${r["ลำดับ"]}</td>
-          <td><input class="list-code" value="${r["รหัสครุภัณฑ์"]}"></td>
-          <td><input class="list-name" value="${r["ชื่อครุภัณฑ์"]}"></td>
-
-          <td>${r["barcode"] ? `<img src="${r["barcode"]}" class="code-img">` : "-"}</td>
-          <td>${r["qrcode"] ? `<img src="${r["qrcode"]}" class="code-img">` : "-"}</td>
-
-          <td><button class="btn list-update">✔</button></td>
-          <td><button class="btn list-delete">🗑</button></td>
-        </tr>`;
+    data.forEach((r,i)=>{
+      const row=i+2;
+      html += `<tr data-row="${row}">
+        <td>${r["ลำดับ"]}</td>
+        <td><input class="list-code" value="${r["รหัสครุภัณฑ์"]}"></td>
+        <td><input class="list-name" value="${r["ชื่อครุภัณฑ์"]}"></td>
+        <td style="font-family: 'Libre Barcode 39'; font-size:28px;">${r["barcode"] || "-"}</td>
+        <td>${r["qrcode"] ? `<img src="${r["qrcode"]}" width="80">` : "-"}</td>
+        <td><button class="btn list-update">✔</button></td>
+        <td><button class="btn list-delete">🗑</button></td>
+      </tr>`;
     });
 
     html += "</tbody></table>";
     pageContent.innerHTML = html;
 
-    document.getElementById("add-item").onclick = async () => {
+    document.getElementById("add-item").onclick = async ()=>{
       const code = document.getElementById("new-code").value;
       const name = document.getElementById("new-name").value;
-
+      await showLoader("กำลังเพิ่ม...");
       const body = new FormData();
-      body.append("sheet", "DATA");
-      body.append("action", "add");
-      body.append("code", code);
-      body.append("name", name);
-
-      const done = popup("กำลังเพิ่ม...");
-      await fetchJSON(BASE, "POST", body);
-      done(() => renderListPage());
+      body.append("sheet","DATA");
+      body.append("action","add");
+      body.append("code",code);
+      body.append("name",name);
+      await fetchJSON(BASE,"POST",body);
+      hideLoader();
+      await renderListPage();
     };
 
-    document.querySelectorAll(".list-update").forEach(btn => {
-      btn.onclick = async function () {
-        const tr = this.closest("tr");
-        const row = tr.dataset.row;
-
-        const code = tr.querySelector(".list-code").value;
-        const name = tr.querySelector(".list-name").value;
-
+    document.querySelectorAll(".list-update").forEach(btn=>{
+      btn.onclick = async function(){
+        const tr=this.closest("tr");
+        const row=tr.dataset.row;
+        const code=tr.querySelector(".list-code").value;
+        const name=tr.querySelector(".list-name").value;
+        await showLoader("กำลังแก้ไข...");
         const body = new FormData();
-        body.append("sheet", "DATA");
-        body.append("action", "update");
-        body.append("row", row);
-        body.append("code", code);
-        body.append("name", name);
-
-        const done = popup("กำลังแก้ไข...");
-        await fetchJSON(BASE, "POST", body);
-        done(() => renderListPage());
+        body.append("sheet","DATA");
+        body.append("action","update");
+        body.append("row",row);
+        body.append("code",code);
+        body.append("name",name);
+        await fetchJSON(BASE,"POST",body);
+        hideLoader();
+        await renderListPage();
       };
     });
 
-    document.querySelectorAll(".list-delete").forEach(btn => {
-      btn.onclick = async function () {
-        const row = this.closest("tr").dataset.row;
-
+    document.querySelectorAll(".list-delete").forEach(btn=>{
+      btn.onclick = async function(){
+        const row=this.closest("tr").dataset.row;
+        await showLoader("กำลังลบ...");
         const body = new FormData();
-        body.append("sheet", "DATA");
-        body.append("action", "delete");
-        body.append("row", row);
-
-        const done = popup("กำลังลบ...");
-        await fetchJSON(BASE, "POST", body);
-        done(() => renderListPage());
+        body.append("sheet","DATA");
+        body.append("action","delete");
+        body.append("row",row);
+        await fetchJSON(BASE,"POST",body);
+        hideLoader();
+        await renderListPage();
       };
     });
   }
 
-
-/***************************************************
- * SECTION 4 — USER PAGE
- ***************************************************/
+  /***************************************************
+   * USER PAGE
+   ***************************************************/
   async function renderUserPage() {
     const data = await fetchJSON(URLS.USER);
 
@@ -330,138 +292,111 @@ document.addEventListener("DOMContentLoaded", () => {
         </select>
         <input id="u-name" placeholder="ชื่อ">
         <button id="add-user">เพิ่ม</button>
-      </div>
-      <hr>
-
+      </div><hr>
       <table class="dash-table">
-        <thead>
-          <tr><th>ID</th><th>Pass</th><th>Status</th><th>Name</th><th>แก้ไข</th><th>ลบ</th></tr>
-        </thead><tbody>
+        <thead><tr><th>ID</th><th>Pass</th><th>Status</th><th>Name</th><th>แก้ไข</th><th>ลบ</th></tr></thead><tbody>
     `;
 
-    data.forEach((u, i) => {
-      const row = i + 2;
-
-      html += `
-        <tr data-row="${row}">
-          <td><input class="u-id" value="${u["ID"]}"></td>
-          <td><input class="u-pass" value="${u["Pass"]}"></td>
-
-          <td>
-            <select class="u-status">
-              <option value="admin" ${u["Status"] === "admin" ? "selected" : ""}>admin</option>
-              <option value="employee" ${u["Status"] === "employee" ? "selected" : ""}>employee</option>
-            </select>
-          </td>
-
-          <td><input class="u-name" value="${u["name"]}"></td>
-          <td><button class="btn up-user">✔</button></td>
-          <td><button class="btn del-user">🗑</button></td>
-        </tr>
-      `;
+    data.forEach((u,i)=>{
+      const row=i+2;
+      html += `<tr data-row="${row}">
+        <td><input class="u-id" value="${u["ID"]}"></td>
+        <td><input class="u-pass" value="${u["Pass"]}"></td>
+        <td>
+          <select class="u-status">
+            <option value="admin" ${u["Status"]==="admin"?"selected":""}>admin</option>
+            <option value="employee" ${u["Status"]==="employee"?"selected":""}>employee</option>
+          </select>
+        </td>
+        <td><input class="u-name" value="${u["name"]}"></td>
+        <td><button class="btn up-user">✔</button></td>
+        <td><button class="btn del-user">🗑</button></td>
+      </tr>`;
     });
 
     html += "</tbody></table>";
     pageContent.innerHTML = html;
 
-    document.getElementById("add-user").onclick = async () => {
-      const body = new FormData();
-      body.append("sheet", "LOGIN");
-      body.append("action", "addUser");
-      body.append("id", document.getElementById("u-id").value);
-      body.append("pass", document.getElementById("u-pass").value);
-      body.append("status", document.getElementById("u-status").value);
-      body.append("name", document.getElementById("u-name").value);
-
-      const done = popup("กำลังเพิ่มสมาชิก...");
-      await fetchJSON(BASE, "POST", body);
-      done(() => renderUserPage());
+    document.getElementById("add-user").onclick=async ()=>{
+      await showLoader("กำลังเพิ่มสมาชิก...");
+      const body=new FormData();
+      body.append("sheet","LOGIN");
+      body.append("action","addUser");
+      body.append("id",document.getElementById("u-id").value);
+      body.append("pass",document.getElementById("u-pass").value);
+      body.append("status",document.getElementById("u-status").value);
+      body.append("name",document.getElementById("u-name").value);
+      await fetchJSON(BASE,"POST",body);
+      hideLoader();
+      await renderUserPage();
     };
 
-    document.querySelectorAll(".up-user").forEach(btn => {
-      btn.onclick = async function () {
-        const tr = this.closest("tr");
-        const row = tr.dataset.row;
-
-        const body = new FormData();
-        body.append("sheet", "LOGIN");
-        body.append("action", "updateUser");
-        body.append("row", row);
-        body.append("id", tr.querySelector(".u-id").value);
-        body.append("pass", tr.querySelector(".u-pass").value);
-        body.append("status", tr.querySelector(".u-status").value);
-        body.append("name", tr.querySelector(".u-name").value);
-
-        const done = popup("กำลังแก้ไขสมาชิก...");
-        await fetchJSON(BASE, "POST", body);
-        done(() => renderUserPage());
+    document.querySelectorAll(".up-user").forEach(btn=>{
+      btn.onclick=async function(){
+        const tr=this.closest("tr");
+        const row=tr.dataset.row;
+        await showLoader("กำลังแก้ไขสมาชิก...");
+        const body=new FormData();
+        body.append("sheet","LOGIN");
+        body.append("action","updateUser");
+        body.append("row",row);
+        body.append("id",tr.querySelector(".u-id").value);
+        body.append("pass",tr.querySelector(".u-pass").value);
+        body.append("status",tr.querySelector(".u-status").value);
+        body.append("name",tr.querySelector(".u-name").value);
+        await fetchJSON(BASE,"POST",body);
+        hideLoader();
+        await renderUserPage();
       };
     });
 
-    document.querySelectorAll(".del-user").forEach(btn => {
-      btn.onclick = async function () {
-        const row = this.closest("tr").dataset.row;
-
-        const body = new FormData();
-        body.append("sheet", "LOGIN");
-        body.append("action", "deleteUser");
-        body.append("row", row);
-
-        const done = popup("กำลังลบสมาชิก...");
-        await fetchJSON(BASE, "POST", body);
-        done(() => renderUserPage());
+    document.querySelectorAll(".del-user").forEach(btn=>{
+      btn.onclick=async function(){
+        const row=this.closest("tr").dataset.row;
+        await showLoader("กำลังลบสมาชิก...");
+        const body=new FormData();
+        body.append("sheet","LOGIN");
+        body.append("action","deleteUser");
+        body.append("row",row);
+        await fetchJSON(BASE,"POST",body);
+        hideLoader();
+        await renderUserPage();
       };
     });
   }
 
-
-/***************************************************
- * SECTION 5 — REPORT PAGE
- ***************************************************/
+  /***************************************************
+   * REPORT PAGE
+   ***************************************************/
   async function renderReportPage() {
     const data = await fetchJSON(URLS.LOG);
 
-    let html = `
-      <table class="dash-table">
-        <thead>
-          <tr>
-            <th>รหัสครุภัณฑ์</th>
-            <th>ชื่อครุภัณฑ์</th>
-            <th>ที่เก็บ</th>
-            <th>สถานะ</th>
-            <th>รายละเอียดเพิ่มเติม</th>
-            <th>วันที่</th>
-            <th>เวลา</th>
-          </tr>
-        </thead><tbody>
-    `;
+    let html=`<table class="dash-table"><thead><tr>
+      <th>รหัสครุภัณฑ์</th><th>ชื่อครุภัณฑ์</th><th>ที่เก็บ</th><th>สถานะ</th>
+      <th>รายละเอียดเพิ่มเติม</th><th>วันที่</th><th>เวลา</th>
+    </tr></thead><tbody>`;
 
-    data.forEach(r => {
-      html += `
-        <tr>
-          <td>${r["รหัสครุภัณฑ์"]}</td>
-          <td>${r["ชื่อครุภัณฑ์"]}</td>
-          <td>${r["ที่เก็บ"]}</td>
-          <td>${r["สถานะ"]}</td>
-          <td>${r["รายละเอียดเพิ่มเติม"]}</td>
-          <td>${r["วันที่"]}</td>
-          <td>${r["เวลา"]}</td>
-        </tr>`;
+    data.forEach(r=>{
+      html+=`<tr>
+        <td>${r["รหัสครุภัณฑ์"]}</td>
+        <td>${r["ชื่อครุภัณฑ์"]}</td>
+        <td>${r["ที่เก็บ"]}</td>
+        <td>${r["สถานะ"]}</td>
+        <td>${r["รายละเอียดเพิ่มเติม"]}</td>
+        <td>${r["วันที่"]}</td>
+        <td>${r["เวลา"]}</td>
+      </tr>`;
     });
 
-    html += "</tbody></table>";
-    pageContent.innerHTML = html;
+    html+="</tbody></table>";
+    pageContent.innerHTML=html;
   }
 
-
-/***************************************************
- * SECTION 6 — MANUAL PAGE
- ***************************************************/
+  /***************************************************
+   * MANUAL PAGE
+   ***************************************************/
   function renderManualPage() {
-    pageContent.innerHTML = `
-      <h2>คู่มือการใช้งาน</h2>
-      <p>เพิ่มข้อความตามที่คุณต้องการ</p>
-    `;
+    pageContent.innerHTML=`<h2>คู่มือการใช้งาน</h2><p>เพิ่มข้อความตามที่คุณต้องการ</p>`;
   }
-loadpage("wait");
+  loadpage("wait");
 });
