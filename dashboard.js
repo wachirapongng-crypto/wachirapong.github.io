@@ -186,94 +186,109 @@ document.addEventListener("DOMContentLoaded", () => {
    * LIST PAGE
    ***************************************************/
   async function renderListPage() {
-    const data = await fetchJSON(URLS.DATA);
+  const data = await fetchJSON(URLS.DATA);
 
-    let html = `
-      <h3>เพิ่มรายการใหม่</h3>
-      <div>
-        <input id="new-code" placeholder="รหัสครุภัณฑ์">
-        <input id="new-name" placeholder="ชื่อครุภัณฑ์">
-        <button id="add-item" class="btn">เพิ่ม</button>
-      </div>
-      <hr>
-      <table class="dash-table">
-        <thead>
-          <tr>
-            <th>ลำดับ</th>
-            <th>รหัส</th>
-            <th>ชื่อ</th>
-            <th>Barcode</th>
-            <th>QRCode</th>
-            <th>แก้ไข</th>
-            <th>ลบ</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
+  let html = `
+    <h3>เพิ่มรายการใหม่</h3>
+    <div>
+      <input id="new-code" placeholder="รหัสครุภัณฑ์">
+      <input id="new-name" placeholder="ชื่อครุภัณฑ์">
+      <button id="add-item" class="btn">เพิ่ม</button>
+    </div>
+    <hr>
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>ลำดับ</th>
+          <th>รหัส</th>
+          <th>ชื่อ</th>
+          <th>Barcode</th>
+          <th>QRCode</th>
+          <th>แก้ไข</th>
+          <th>ลบ</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
 
-    data.forEach((r,i)=>{
-      const row=i+2;
-      html += `<tr data-row="${row}">
-        <td>${r["ลำดับ"]}</td>
-        <td><input class="list-code" value="${r["รหัสครุภัณฑ์"]}"></td>
-        <td><input class="list-name" value="${r["ชื่อครุภัณฑ์"]}"></td>
-        <td style="font-family: 'Libre Barcode 39'; font-size:28px;">${r["barcode"] || "-"}</td>
-        <td>${r["qrcode"] ? `<img src="${r["qrcode"]}" width="80">` : "-"}</td>
-        <td><button class="btn list-update">✔</button></td>
-        <td><button class="btn list-delete">🗑</button></td>
-      </tr>`;
-    });
+  data.forEach((r, i) => {
+    const row = i + 2;
+    html += `<tr data-row="${row}">
+      <td>${r["ลำดับ"]}</td>
+      <td><input class="list-code" value="${r["รหัสครุภัณฑ์"]}"></td>
+      <td><input class="list-name" value="${r["ชื่อครุภัณฑ์"]}"></td>
+      <td style="font-family: 'Libre Barcode 39'; font-size:28px;">${r["barcode"] || "-"}</td>
+      <td>${r["qrcode"] ? `<img src="${r["qrcode"]}" width="80">` : "-"}</td>
+      <td><button class="btn list-update">✔</button></td>
+      <td><button class="btn list-delete">🗑</button></td>
+    </tr>`;
+  });
 
-    html += "</tbody></table>";
-    pageContent.innerHTML = html;
+  html += "</tbody></table>";
+  pageContent.innerHTML = html;
 
-    document.getElementById("add-item").onclick = async ()=>{
-      const code = document.getElementById("new-code").value;
-      const name = document.getElementById("new-name").value;
-      await showLoader("กำลังเพิ่ม...");
+  // เพิ่มรายการใหม่
+  document.getElementById("add-item").onclick = async () => {
+    const code = document.getElementById("new-code").value;
+    const name = document.getElementById("new-name").value;
+    await showLoader("กำลังเพิ่ม...");
+    const body = new FormData();
+    body.append("sheet", "DATA");
+    body.append("action", "add");
+    body.append("code", code);
+    body.append("name", name);
+    await fetchJSON(BASE, "POST", body);
+    hideLoader();
+    await renderListPage();
+  };
+
+  // แก้ไข
+  document.querySelectorAll(".list-update").forEach(btn => {
+    btn.onclick = async function() {
+      const tr = this.closest("tr");
+      const row = tr.dataset.row;
+      const code = tr.querySelector(".list-code").value;
+      const name = tr.querySelector(".list-name").value;
+      await showLoader("กำลังแก้ไข...");
       const body = new FormData();
-      body.append("sheet","DATA");
-      body.append("action","add");
-      body.append("code",code);
-      body.append("name",name);
-      await fetchJSON(BASE,"POST",body);
+      body.append("sheet", "DATA");
+      body.append("action", "update");
+      body.append("row", row);
+      body.append("code", code);
+      body.append("name", name);
+      await fetchJSON(BASE, "POST", body);
       hideLoader();
       await renderListPage();
     };
+  });
 
-    document.querySelectorAll(".list-update").forEach(btn=>{
-      btn.onclick = async function(){
-        const tr=this.closest("tr");
-        const row=tr.dataset.row;
-        const code=tr.querySelector(".list-code").value;
-        const name=tr.querySelector(".list-name").value;
-        await showLoader("กำลังแก้ไข...");
-        const body = new FormData();
-        body.append("sheet","DATA");
-        body.append("action","update");
-        body.append("row",row);
-        body.append("code",code);
-        body.append("name",name);
-        await fetchJSON(BASE,"POST",body);
-        hideLoader();
-        await renderListPage();
-      };
-    });
+  // ลบ
+  document.querySelectorAll(".list-delete").forEach(btn => {
+    btn.onclick = async function() {
+      const row = this.closest("tr").dataset.row;
+      await showLoader("กำลังลบ...");
+      const body = new FormData();
+      body.append("sheet", "DATA");
+      body.append("action", "delete");
+      body.append("row", row);
+      await fetchJSON(BASE, "POST", body);
+      hideLoader();
+      await renderListPage();
+    };
+  });
+}
 
-    document.querySelectorAll(".list-delete").forEach(btn=>{
-      btn.onclick = async function(){
-        const row=this.closest("tr").dataset.row;
-        await showLoader("กำลังลบ...");
-        const body = new FormData();
-        body.append("sheet","DATA");
-        body.append("action","delete");
-        body.append("row",row);
-        await fetchJSON(BASE,"POST",body);
-        hideLoader();
-        await renderListPage();
-      };
-    });
-  }
+// Loader functions
+async function showLoader(message = "กำลังโหลด...") {
+  const loader = document.getElementById("loader");
+  loader.querySelector(".loader-text").textContent = message;
+  loader.style.display = "flex";
+}
+
+function hideLoader() {
+  const loader = document.getElementById("loader");
+  loader.style.display = "none";
+}
 
   /***************************************************
    * USER PAGE
