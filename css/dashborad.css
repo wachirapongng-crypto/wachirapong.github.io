@@ -1,4 +1,4 @@
-/* ============ GLOBAL ============ */
+/* ====== CSS ที่คุณส่งมา (คงไว้ทั้งหมด + ปรับเพิ่มเล็กน้อย) ====== */
 body {
   font-family: "Prompt", sans-serif;
   margin: 0;
@@ -6,8 +6,6 @@ body {
   height: 100vh;
   overflow: hidden;
 }
-
-/* ============ HEADER ============ */
 header {
   background: #007bff;
   color: white;
@@ -16,73 +14,41 @@ header {
   align-items: center;
   justify-content: space-between;
 }
-header h1 {
-  margin: 0;
-  font-size: 1.25rem;
-}
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
+header h1 { margin: 0; font-size: 1.25rem; }
+.header-right { display: flex; align-items: center; gap: 15px; }
+
 #logout-btn {
-  background: #ff4d4d;
-  border: none;
-  color: white;
-  padding: 8px 15px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: 0.3s;
+  background: #ff4d4d; border: none; color: white;
+  padding: 8px 15px; border-radius: 6px;
+  cursor: pointer; transition: 0.3s;
 }
 #logout-btn:hover { background: #e60000; }
 
-/* ============ SIDEBAR ============ */
 .sidebar {
-  height: 100%;
-  width: 0;
-  position: fixed;
-  z-index: 999;
-  top: 0;
-  left: 0;
+  height: 100%; width: 0; position: fixed; z-index: 999;
+  top: 0; left: 0;
   background-color: #3c9afd;
   overflow-x: hidden;
-  transition: 0.35s;
-  padding-top: 70px;
+  transition: 0.35s; padding-top: 70px;
 }
 .sidebar button {
-  width: 100%;
-  background: none;
-  border: none;
-  text-align: left;
-  padding: 12px 30px;
-  color: #eef;
-  font-size: 18px;
-  cursor: pointer;
-  transition: 0.2s;
+  width: 100%; background: none; border: none;
+  text-align: left; padding: 12px 30px; color: #eef;
+  font-size: 18px; cursor: pointer; transition: 0.2s;
 }
 .sidebar button:hover { color: #fff; }
 .sidebar .closebtn {
-  position: absolute;
-  top: 10px;
-  right: 18px;
-  font-size: 40px;
-  color: white;
-  cursor: pointer;
+  position: absolute; top: 10px; right: 18px;
+  font-size: 40px; color: white; cursor: pointer;
 }
 
-/* hamburger btn */
 .openbtn {
-  font-size: 22px;
-  cursor: pointer;
-  background-color: #007bff;
-  color: white;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 6px;
+  font-size: 22px; cursor: pointer;
+  background-color: #007bff; color: white;
+  padding: 10px 16px; border: none; border-radius: 6px;
 }
 .openbtn:hover { background-color: #0056b3; }
 
-/* ============ MAIN CONTENT ============ */
 #main {
   transition: margin-left 0.35s;
   padding: 20px;
@@ -97,7 +63,7 @@ header h1 {
   animation: fadeIn 0.2s;
 }
 
-/* ============ FORMS & BUTTONS ============ */
+/* input/button */
 .content-box input,
 .content-box select,
 .content-box button {
@@ -107,116 +73,23 @@ header h1 {
   font-size: 1rem;
 }
 .content-box button {
-  background: #007bff;
-  border: none;
-  color: white;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: 0.3s;
+  background: #007bff; border: none; color: white;
+  border-radius: 6px; cursor: pointer; transition: 0.3s;
 }
 .content-box button:hover { background: #0056b3; }
 
-/* ============ TABLE ============ */
+/* table */
 .dash-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
-  background: white;
+  width: 100%; border-collapse: collapse;
+  margin-top: 15px; background: white;
 }
 .dash-table th, .dash-table td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  text-align: center;
-  vertical-align: middle;
+  border: 1px solid #ccc; padding: 8px;
+  text-align: center; vertical-align: middle;
 }
-.dash-table th {
-  background: #007bff;
-  color: white;
-}
-.dash-table img {
-  max-height: 60px;
-}
+.dash-table th { background: #007bff; color: white; }
 
-/* ============ TABLE ACTIONS ============ */
-.table-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 10px;
-  gap: 10px;
-}
-.table-actions .btn { width: auto; padding: 6px 14px; }
-
-/* ============ MODAL ============ */
-.modal {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-.modal-content {
-  background: white;
-  padding: 20px 25px;
-  border-radius: 12px;
-  width: 320px;
-  max-width: 90%;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-  animation: fadeIn 0.25s ease-out;
-}
-.modal-content h3 { margin-top: 0; text-align: center; }
-.modal-content label { display: block; margin: 10px 0; font-size: 0.95rem; }
-.modal-content input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; }
-.form-actions {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 15px;
-}
-.form-actions button { width: 48%; }
-
-/* ============ POPUP ============ */
-.popup {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%) translateY(-20px);
-  top: 18%;
-  z-index: 9999;
-  opacity: 0;
-  transition: all .28s ease;
-  pointer-events: none;
-}
-.popup.visible {
-  transform: translateX(-50%) translateY(0);
-  opacity: 1;
-  pointer-events: auto;
-}
-.popup .popup-msg {
-  background: #111;
-  color: #fff;
-  padding: 14px 18px;
-  border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(0,0,0,.15);
-  min-width: 160px;
-  text-align: center;
-}
-.popup.ok .popup-msg { background:#2a9d8f; }
-.popup.err .popup-msg { background:#e63946; }
-
-/* ============ ANIMATION ============ */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-
-/* ============ RESPONSIVE ============ */
-@media (max-width: 600px){
-  .table-actions { flex-direction: column; align-items: stretch; }
-  .form-actions { flex-direction: column; }
-  .form-actions button { width: 100%; margin-bottom: 8px; }
-}
-.barcode {
-    font-family: 'Libre Barcode 39', cursive;
-    font-size: 48px;
-  }
