@@ -57,7 +57,7 @@
         localStorage.setItem("loginUser", JSON.stringify(user));
 
         if(user.Status === "admin"){
-          window.location.href = "test.html";
+          window.location.href = "adminDashboard.html";
         } else if(user.Status === "employee"){
           window.location.href = "ีuserDashboard.html";
         } else {
