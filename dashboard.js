@@ -332,60 +332,209 @@ document.addEventListener("DOMContentLoaded", () => {
       </section>`;
   }
 
-  // (member functions kept, unchanged in logic) ...
-  // ---------- (ผมยังคงฟังก์ชันจัดการสมาชิกไว้เหมือนเดิม) ----------
-  // For brevity I didn't repeat member functions here — keep your existing member code or copy from prior file.
-  // ========= Event listeners =========
-  document.addEventListener("change", async (e) => {
-    const el = e.target;
-    if (el.matches(".room-select") || el.matches(".status-select")) {
-      const sheetRow = Number(el.dataset.row);
-      const tr = el.closest("tr");
-      const payload = {
-        row: sheetRow,
-        รหัส: tr.children[1]?.innerText || "",
-        ชื่อ: tr.children[2]?.innerText || "",
-        ที่อยู่: tr.querySelector(".room-select")?.value || "",
-        สถานะ: tr.querySelector(".status-select")?.value || "",
-        วันที่: tr.children[5]?.innerText || "",
-        เวลา: tr.children[6]?.innerText || ""
-      };
-      const form = new FormData(); form.append("sheet", "WAIT"); form.append("action", "update"); form.append("row", String(payload.row)); form.append("data", JSON.stringify(payload));
-      try {
-        await fetchCORS(BASE, { method: "POST", body: form });
-        showPopup("แก้ไขสำเร็จ", "ok", 1500);
-      } catch (err) {
-        console.error(err); showPopup("แก้ไขไม่สำเร็จ", "err");
-      }
-    }
+  // ======================================================
+// ========== ระบบจัดการสมาชิก (LOGIN SHEET) ===========
+// ======================================================
+
+// โหลดตารางสมาชิก
+async function renderUserTable() {
+  pageContent.innerHTML = "<p>กำลังโหลด...</p>";
+
+  const data = await fetchCORS(SHEET_URL.LOGIN);
+  cache.MEMBER = data;
+
+  let html = `
+    <div class="table-actions">
+      <button id="add-user-btn" class="btn primary">➕ เพิ่มสมาชิก</button>
+    </div>
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>ลำดับ</th>
+          <th>ID</th>
+          <th>Pass</th>
+          <th>Status</th>
+          <th>name</th>
+          <th>แก้ไข</th>
+          <th>ลบ</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  data.forEach((row, i) => {
+    const sheetRow = i + 2;
+    html += `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${escapeHTML(row.ID)}</td>
+        <td>${escapeHTML(row.Pass)}</td>
+        <td>${escapeHTML(row.Status)}</td>
+        <td>${escapeHTML(row.name)}</td>
+        <td><button class="btn edit-user" data-row="${sheetRow}">แก้ไข</button></td>
+        <td><button class="btn del-user" data-row="${sheetRow}" style="color:red;">ลบ</button></td>
+      </tr>
+    `;
   });
 
-  document.addEventListener("click", async (e) => {
-    if (e.target && e.target.id === "confirm-wait") {
-      const selected = [...document.querySelectorAll(".wait-select:checked")];
-      for (const chk of selected) {
-        const row = Number(chk.dataset.row);
-        const form = new FormData();
-        form.append("sheet", "WAIT"); form.append("action", "moveWait"); form.append("targetSheet", "LOG"); form.append("row", String(row));
-        await fetchCORS(BASE, { method: "POST", body: form });
-      }
-      cache.WAIT = null; showPopup("ยืนยันรายการเรียบร้อย", "ok");
-      await loadData("WAIT");
-    }
+  html += "</tbody></table>";
+  pageContent.innerHTML = html;
 
-    if (e.target && e.target.classList.contains("delete-btn")) {
-      if (!confirm("ลบแถวนี้จริงหรือไม่?")) return;
+  // ปุ่มเปิดฟอร์มเพิ่ม
+  document.getElementById("add-user-btn").addEventListener("click", () => openAddUserModal());
+
+  // ปุ่มแก้ไข
+  pageContent.querySelectorAll(".edit-user").forEach(btn => {
+    btn.addEventListener("click", e => {
       const row = Number(e.target.dataset.row);
+      const record = data[row - 2];
+      openEditUserModal(row, record);
+    });
+  });
+
+  // ปุ่มลบ
+  pageContent.querySelectorAll(".del-user").forEach(btn => {
+    btn.addEventListener("click", async e => {
+      if (!confirm("ต้องการลบสมาชิกนี้จริงหรือไม่?")) return;
+      const row = Number(e.target.dataset.row);
+
       const form = new FormData();
-      form.append("sheet", "WAIT");
+      form.append("sheet", "LOGIN");
       form.append("action", "delete");
       form.append("row", String(row));
-      await fetchCORS(BASE, { method: "POST", body: form });
-      cache.WAIT = null; showPopup("ลบสำเร็จ", "ok");
-      await loadData("WAIT");
-    }
-  });
 
+      await fetchCORS(BASE, { method: "POST", body: form });
+      showPopup("ลบสำเร็จ", "ok");
+      renderUserTable();
+    });
+  });
+}
+
+
+
+// =================================================================
+// ======================== Modal ฟอร์มเพิ่ม ========================
+// =================================================================
+
+function openAddUserModal() {
+  const modal = document.createElement("div");
+  modal.className = "modal";
+
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3>➕ เพิ่มสมาชิก</h3>
+      <form id="add-user-form">
+        <label>ID: <input type="text" name="ID" required></label>
+        <label>Pass: <input type="text" name="Pass" required></label>
+
+        <label>Status:
+          <select name="Status" required>
+            <option value="admin">admin</option>
+            <option value="employee">employee</option>
+          </select>
+        </label>
+
+        <label>name: <input type="text" name="name" required></label>
+
+        <div class="form-actions">
+          <button type="submit" class="btn primary">บันทึก</button>
+          <button type="button" class="btn" id="cancel-add-user">ยกเลิก</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector("#cancel-add-user").addEventListener("click", () => modal.remove());
+
+  modal.querySelector("#add-user-form").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const fd = new FormData(ev.target);
+
+    const payload = {
+      ID: fd.get("ID").trim(),
+      Pass: fd.get("Pass").trim(),
+      Status: fd.get("Status").trim(),
+      name: fd.get("name").trim()
+    };
+
+    const post = new FormData();
+    post.append("sheet", "LOGIN");
+    post.append("action", "add");
+    post.append("data", JSON.stringify(payload));
+
+    await fetchCORS(BASE, { method: "POST", body: post });
+
+    showPopup("เพิ่มสมาชิกสำเร็จ", "ok");
+    modal.remove();
+    renderUserTable();
+  });
+}
+
+
+
+// =================================================================
+// ======================== Modal ฟอร์มแก้ไข ========================
+// =================================================================
+
+function openEditUserModal(row, rec) {
+  const modal = document.createElement("div");
+  modal.className = "modal";
+
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h3>✏️ แก้ไขสมาชิก</h3>
+      <form id="edit-user-form">
+        <label>ID: <input type="text" name="ID" required value="${escapeHTML(rec.ID)}"></label>
+        <label>Pass: <input type="text" name="Pass" required value="${escapeHTML(rec.Pass)}"></label>
+
+        <label>Status:
+          <select name="Status" required>
+            <option value="admin" ${rec.Status === "admin" ? "selected" : ""}>admin</option>
+            <option value="employee" ${rec.Status === "employee" ? "selected" : ""}>employee</option>
+          </select>
+        </label>
+
+        <label>name: <input type="text" name="name" required value="${escapeHTML(rec.name)}"></label>
+
+        <div class="form-actions">
+          <button type="submit" class="btn primary">บันทึก</button>
+          <button type="button" class="btn" id="cancel-edit-user">ยกเลิก</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector("#cancel-edit-user").addEventListener("click", () => modal.remove());
+
+  modal.querySelector("#edit-user-form").addEventListener("submit", async ev => {
+    ev.preventDefault();
+
+    const fd = new FormData(ev.target);
+
+    const payload = {
+      ID: fd.get("ID").trim(),
+      Pass: fd.get("Pass").trim(),
+      Status: fd.get("Status").trim(),
+      name: fd.get("name").trim()
+    };
+
+    const post = new FormData();
+    post.append("sheet", "LOGIN");
+    post.append("action", "update");
+    post.append("row", String(row));
+    post.append("data", JSON.stringify(payload));
+
+    await fetchCORS(BASE, { method: "POST", body: post });
+
+    showPopup("แก้ไขสำเร็จ", "ok");
+    modal.remove();
+    renderUserTable();
+  });
+}
   // initial
   loadPage("wait");
 });
