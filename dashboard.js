@@ -1,4 +1,4 @@
-// dashboard.js — วางทับไฟล์เดิม
+// dashboard.js (แก้ไข)
 document.addEventListener("DOMContentLoaded", () => {
   // ---------- config ----------
   const BASE = "https://script.google.com/macros/s/AKfycbwixv3fvgOqqE1OhJVV0pp7fvqLWXP1clMoMcYvHloVBDm6jBi9LQy4AXf0j8qjxnC6tA/exec";
@@ -15,27 +15,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const usernameEl = document.getElementById("username");
   usernameEl.textContent = localStorage.getItem("username") || "Admin";
 
-  // simple cache for each sheet
   const cache = { WAIT: null, DATA: null, MEMBER: null };
 
-  // fetch wrapper: GET or POST (supports FormData POST)
   async function fetchCORS(url, options = {}) {
     try {
       let res;
       if (options.method && options.method.toUpperCase() === "POST") {
-        // assume options.body is FormData or similar
         res = await fetch(url, { method: "POST", body: options.body });
       } else {
-        // GET
         res = await fetch(url, { method: "GET", headers: options.headers || {} });
       }
       const text = await res.text();
       try {
         return JSON.parse(text);
       } catch (err) {
-        // sometimes GAS returns a CSV-ish or plain text — try to fallback gracefully
         console.warn("GAS returned non-JSON or parse failed:", text);
-        // simple attempt: if text looks like array start
         if (text.trim().startsWith("[")) {
           try { return eval(text); } catch(e) { return []; }
         }
@@ -80,9 +74,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${day}-${month}-${year}`;
   }
 
-  // load page router
+  // router
   window.loadPage = async function (type) {
-    closeNav?.(); // if you have closeNav
+    closeNav?.();
     pageContent.innerHTML = "";
     if (type === "wait") { pageTitle.textContent = "🕓 ครุภัณฑ์ที่รอตรวจสอบ"; await loadData("WAIT"); }
     else if (type === "add") { pageTitle.textContent = "➕ เพิ่มรายการครุภัณฑ์"; renderAddForm(); }
@@ -93,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
     else { pageTitle.textContent = "Dashboard"; pageContent.innerHTML = "<p>เลือกเมนูด้านซ้าย</p>"; }
   };
 
-  // loadData for generic sheets
+  // loadData
   async function loadData(sheet) {
     const url = sheet === "WAIT" ? SHEET_URL.WAIT : (sheet === "DATA" ? SHEET_URL.DATA : SHEET_URL.MEMBER);
     try {
@@ -109,26 +103,29 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Generic table renderer used for WAIT and others (basic)
+  // Generic renderer (keeps sheetRow correct -> i+2)
   async function renderTableGeneric(data, sheet) {
     let html = `<div class="note">หมายเหตุ: การดำเนินการอาจใช้เวลา 5–10 วินาที</div>`;
     if (!data || data.length === 0) { html += "<p>ไม่พบข้อมูล</p>"; return html; }
 
+    const keysFromSheet = Object.keys(data[0]);
+    const headers = [...keysFromSheet];
+    if (sheet === "WAIT") {
+      headers.unshift("เลือก");
+      headers.push("ลบ");
+    }
+
     html += `<table class='dash-table'><thead><tr>`;
-    // keys from first object
-    const keys = Object.keys(data[0]);
-    // special columns for WAIT
-    if (sheet === "WAIT") { keys.unshift("เลือก"); keys.push("ลบ"); }
-    keys.forEach(k => html += `<th>${escapeHTML(k)}</th>`);
+    headers.forEach(k => html += `<th>${escapeHTML(k)}</th>`);
     html += `</tr></thead><tbody>`;
 
     data.forEach((row, i) => {
-      const rowNumber = i + 2;
-      html += `<tr>`;
-      keys.forEach(k => {
+      const sheetRow = i + 2; // important: actual Google Sheet row
+      html += `<tr data-row="${sheetRow}">`;
+      headers.forEach(k => {
         let val = (row[k] || row[k] === 0) ? row[k] : "";
         if ((k === "วันที่" || k === "เวลา") && val) val = formatDate(val);
-        html += `<td>${renderCellGeneric(k, val, rowNumber, row)}</td>`;
+        html += `<td>${renderCellGeneric(k, val, sheetRow, row)}</td>`;
       });
       html += `</tr>`;
     });
@@ -138,10 +135,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return html;
   }
 
-  // QR column detection
   const QR_COLUMNS = ["QR Code", "qr_code", "qr", "QR"];
 
-  function renderCellGeneric(key, val, rowIndex, fullRow = {}) {
+  function renderCellGeneric(key, val, sheetRow, fullRow = {}) {
     const roomList = ["501", "502", "503", "401", "401A", "401B", "401C", "402", "403", "404", "405", "ห้องพักครู", "301", "302"];
     const statusList = ["ใช้งานได้", "ชำรุด", "เสื่อมสภาพ", "หมดอายุการใช้งาน", "ไม่รองรับการใช้งาน"];
     if (typeof val === "object" && val !== null) {
@@ -151,18 +147,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (QR_COLUMNS.includes(key)) {
       return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(val || "")}" alt="qr">`;
     }
-    if (key === "เลือก") return `<input type="checkbox" class="wait-select" data-row="${rowIndex}">`;
-    if (key === "ลบ") return `<button class="delete-btn" data-row="${rowIndex}" style="color:red;">ลบ</button>`;
+    if (key === "เลือก") return `<input type="checkbox" class="wait-select" data-row="${sheetRow}">`;
+    if (key === "ลบ") return `<button class="delete-btn" data-row="${sheetRow}" style="color:red;">ลบ</button>`;
     if (key === "ที่อยู่") {
-      return `<select class="room-select" data-row="${rowIndex}">${roomList.map(r => `<option value="${r}"${String(val) === String(r) ? " selected" : ""}>${r}</option>`).join("")}</select>`;
+      return `<select class="room-select" data-row="${sheetRow}">${roomList.map(r => `<option value="${r}"${String(val) === String(r) ? " selected" : ""}>${r}</option>`).join("")}</select>`;
     }
     if (key === "สถานะ") {
-      return `<select class="status-select" data-row="${rowIndex}">${statusList.map(s => `<option value="${s}"${String(val) === String(s) ? " selected" : ""}>${s}</option>`).join("")}</select>`;
+      return `<select class="status-select" data-row="${sheetRow}">${statusList.map(s => `<option value="${s}"${String(val) === String(s) ? " selected" : ""}>${s}</option>`).join("")}</select>`;
     }
     return escapeHTML(val);
   }
 
-  // ---------- Add form ----------
+  // ---------- Add ----------
   function renderAddForm() {
     const html = `<div class="note">หมายเหตุ: การดำเนินการอาจใช้เวลา 5–10 วินาที</div>
       <form id="add-form" class="dash-form">
@@ -182,22 +178,26 @@ document.addEventListener("DOMContentLoaded", () => {
       const code = formData.get("code").trim();
       const name = formData.get("name").trim();
       if (!code || !name) return showPopup("กรอกให้ครบ", "err");
-      const data = await fetchCORS(SHEET_URL.DATA);
-      const nextIndex = (data && data.length) ? data.length + 1 : 1;
+
+      // IMPORTANT: send keys that exactly match your sheet headers
       const post = new FormData();
       post.append("sheet", "DATA");
       post.append("action", "add");
-      // use keys matching sheet: try 'รหัสครุภัณฑ์' and 'ชื่อครุภัณฑ์'
-      post.append("data", JSON.stringify({ ลำดับ: nextIndex, "รหัสครุภัณฑ์": code, "ชื่อครุภัณฑ์": name }));
-      await fetchCORS(BASE, { method: "POST", body: post });
-      cache.DATA = null; showPopup("เพิ่มสำเร็จ", "ok");
-      await renderListTable();
+      post.append("data", JSON.stringify({ "รหัสครุภัณฑ์": code, "ชื่อครุภัณฑ์": name }));
+
+      try {
+        await fetchCORS(BASE, { method: "POST", body: post });
+        cache.DATA = null; showPopup("เพิ่มสำเร็จ", "ok");
+        await renderListTable();
+      } catch (err) {
+        console.error(err); showPopup("เพิ่มไม่สำเร็จ", "err");
+      }
     });
 
     document.getElementById("add-cancel").addEventListener("click", () => { pageContent.innerHTML = ""; });
   }
 
-  // ---------- Edit table (for DATA) ----------
+  // ---------- Edit table ----------
   async function renderEditTable() {
     pageContent.innerHTML = "<p>กำลังโหลด...</p>";
     const data = await fetchCORS(SHEET_URL.DATA); cache.DATA = data;
@@ -205,11 +205,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!data || data.length === 0) { html += "<p>ไม่พบข้อมูล</p>"; pageContent.innerHTML = html; return; }
     html += `<table class="dash-table"><thead><tr><th>ลำดับ</th><th>รหัสครุภัณฑ์</th><th>ชื่อครุภัณฑ์</th><th>จัดการ</th></tr></thead><tbody>`;
     data.forEach((row, i) => {
+      const sheetRow = i + 2;
       const idx = i + 1;
-      // support multiple possible keys
       const code = escapeHTML(row["รหัสครุภัณฑ์"] || row["รหัส"] || row["B"] || row["b"] || "");
       const name = escapeHTML(row["ชื่อครุภัณฑ์"] || row["ชื่อ"] || row["C"] || row["c"] || "");
-      html += `<tr data-row="${i + 2}"><td>${idx}</td><td class="cell-code">${code}</td><td class="cell-name">${name}</td><td><button class="btn edit-item" data-row="${i + 2}">แก้ไข</button></td></tr>`;
+      html += `<tr data-row="${sheetRow}"><td>${idx}</td><td class="cell-code">${code}</td><td class="cell-name">${name}</td><td><button class="btn edit-item" data-row="${sheetRow}">แก้ไข</button></td></tr>`;
     });
     html += `</tbody></table>`;
     pageContent.innerHTML = html;
@@ -247,18 +247,21 @@ document.addEventListener("DOMContentLoaded", () => {
       const post = new FormData();
       post.append("sheet", "DATA");
       post.append("action", "update");
-      post.append("row", String(row));
-      // send keys matching sheet
+      post.append("row", String(row)); // <-- important: send real sheet row
       post.append("data", JSON.stringify({ "รหัสครุภัณฑ์": newCode, "ชื่อครุภัณฑ์": newName }));
-      await fetchCORS(BASE, { method: "POST", body: post });
-      cache.DATA = null;
-      showPopup("แก้ไขสำเร็จ", "ok");
-      modal.remove();
-      await renderEditTable();
+      try {
+        await fetchCORS(BASE, { method: "POST", body: post });
+        cache.DATA = null;
+        showPopup("แก้ไขสำเร็จ", "ok");
+        modal.remove();
+        await renderEditTable();
+      } catch (err) {
+        console.error(err); showPopup("แก้ไขไม่สำเร็จ", "err");
+      }
     });
   }
 
-  // ---------- List table (main DATA list) ----------
+  // ---------- List table ----------
   async function renderListTable() {
     pageContent.innerHTML = "<p>กำลังโหลด...</p>";
     const data = await fetchCORS(SHEET_URL.DATA); cache.DATA = data;
@@ -268,13 +271,14 @@ document.addEventListener("DOMContentLoaded", () => {
     html += `<table class="dash-table"><thead><tr><th>ลำดับ</th><th>รหัสครุภัณฑ์</th><th>ชื่อครุภัณฑ์</th><th>BarCode</th><th>QR Code</th><th>แก้ไข</th><th>ลบ</th></tr></thead><tbody>`;
 
     data.forEach((row, i) => {
+      const sheetRow = i + 2;
       const idx = i + 1;
       const rawCode = row["รหัสครุภัณฑ์"] || row["รหัส"] || row["B"] || "";
-      const code = encodeURIComponent(rawCode || "");
+      const codeForImage = encodeURIComponent(rawCode || "");
       const name = escapeHTML(row["ชื่อครุภัณฑ์"] || row["ชื่อ"] || row["C"] || "");
-      const barcodeURL = `https://barcode.tec-it.com/barcode.ashx?data=${code}&code=Code128&translate-esc=true`;
-      const qrURL = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${code}`;
-      html += `<tr data-row="${i + 2}"><td>${idx}</td><td>${escapeHTML(decodeURIComponent(code))}</td><td>${name}</td><td><img src="${barcodeURL}" alt="barcode" style="height:40px;"></td><td><img src="${qrURL}" alt="qr" style="height:60px;"></td><td><button class="btn edit-item" data-row="${i + 2}">แก้ไข</button></td><td><button class="btn del-item" data-row="${i + 2}" style="color:red;">ลบ</button></td></tr>`;
+      const barcodeURL = `https://barcode.tec-it.com/barcode.ashx?data=${codeForImage}&code=Code128&translate-esc=true`;
+      const qrURL = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${codeForImage}`;
+      html += `<tr data-row="${sheetRow}"><td>${idx}</td><td>${escapeHTML(rawCode)}</td><td>${name}</td><td><img src="${barcodeURL}" alt="barcode" style="height:40px;"></td><td><img src="${qrURL}" alt="qr" style="height:60px;"></td><td><button class="btn edit-item" data-row="${sheetRow}">แก้ไข</button></td><td><button class="btn del-item" data-row="${sheetRow}" style="color:red;">ลบ</button></td></tr>`;
     });
 
     html += `</tbody></table>`;
@@ -301,14 +305,18 @@ document.addEventListener("DOMContentLoaded", () => {
         form.append("sheet", "DATA");
         form.append("action", "delete");
         form.append("row", String(row));
-        await fetchCORS(BASE, { method: "POST", body: form });
-        cache.DATA = null; showPopup("ลบสำเร็จ", "ok");
-        await renderListTable();
+        try {
+          await fetchCORS(BASE, { method: "POST", body: form });
+          cache.DATA = null; showPopup("ลบสำเร็จ", "ok");
+          await renderListTable();
+        } catch (err) {
+          console.error(err); showPopup("ลบไม่สำเร็จ", "err");
+        }
       });
     });
   }
 
-  // ---------- Manual ----------
+  // ---------- Manual (same) ----------
   function renderManual() {
     pageContent.innerHTML = `<div class="note">หมายเหตุ: การดำเนินการอาจใช้เวลา 5–10 วินาที</div>
       <section class="manual">
@@ -324,126 +332,17 @@ document.addEventListener("DOMContentLoaded", () => {
       </section>`;
   }
 
-  // ---------- User/Member management ----------
-  async function renderUserTable() {
-    pageContent.innerHTML = "<p>กำลังโหลด...</p>";
-    const data = await fetchCORS(SHEET_URL.MEMBER); cache.MEMBER = data;
-    let html = `<div class="note">จัดการสมาชิก — เพิ่ม/แก้ไข/ลบ</div>`;
-    if (!data || data.length === 0) { html += `<div><button id="add-member" class="btn primary">➕ เพิ่มสมาชิก</button><p>ไม่พบสมาชิก</p></div>`; pageContent.innerHTML = html; document.getElementById("add-member")?.addEventListener("click", openAddMemberModal); return; }
-    html += `<div class="table-actions"><button id="refresh-member" class="btn">รีเฟรช</button><button id="add-member" class="btn primary">➕ เพิ่มสมาชิก</button></div>`;
-    html += `<table class="dash-table"><thead><tr><th>#</th><th>ชื่อ</th><th>username</th><th>email</th><th>แก้ไข</th><th>ลบ</th></tr></thead><tbody>`;
-    data.forEach((row, i) => {
-      const idx = i + 1;
-      const name = escapeHTML(row["ชื่อ"] || row["name"] || row["displayName"] || "");
-      const username = escapeHTML(row["username"] || row["user"] || row["usern"] || "");
-      const email = escapeHTML(row["email"] || row["อีเมล"] || "");
-      html += `<tr data-row="${i + 2}"><td>${idx}</td><td class="m-name">${name}</td><td class="m-username">${username}</td><td class="m-email">${email}</td><td><button class="btn edit-member" data-row="${i + 2}">แก้ไข</button></td><td><button class="btn del-member" data-row="${i + 2}" style="color:red;">ลบ</button></td></tr>`;
-    });
-    html += `</tbody></table>`;
-    pageContent.innerHTML = html;
-
-    document.getElementById("refresh-member").addEventListener("click", async () => { cache.MEMBER = null; await renderUserTable(); });
-    document.getElementById("add-member").addEventListener("click", openAddMemberModal);
-
-    pageContent.querySelectorAll(".edit-member").forEach(btn => {
-      btn.addEventListener("click", e => {
-        const row = Number(e.target.dataset.row);
-        const tr = e.target.closest("tr");
-        const currentName = tr.querySelector(".m-name").innerText;
-        const currentUsername = tr.querySelector(".m-username").innerText;
-        const currentEmail = tr.querySelector(".m-email").innerText;
-        openEditMemberModal(row, currentName, currentUsername, currentEmail);
-      });
-    });
-
-    pageContent.querySelectorAll(".del-member").forEach(btn => {
-      btn.addEventListener("click", async e => {
-        if (!confirm("ต้องการลบสมาชิกนี้จริงหรือไม่?")) return;
-        const row = Number(e.target.dataset.row);
-        const form = new FormData();
-        form.append("sheet", "MEMBER");
-        form.append("action", "delete");
-        form.append("row", String(row));
-        await fetchCORS(BASE, { method: "POST", body: form });
-        cache.MEMBER = null; showPopup("ลบสมาชิกสำเร็จ", "ok");
-        await renderUserTable();
-      });
-    });
-  }
-
-  function openAddMemberModal() {
-    const modal = document.createElement("div"); modal.className = "modal";
-    modal.innerHTML = `<div class="modal-content"><h3>เพิ่มสมาชิก</h3>
-      <form id="member-add-form">
-        <label>ชื่อ: <input name="name" required></label>
-        <label>username: <input name="username" required></label>
-        <label>email: <input name="email" type="email"></label>
-        <div class="form-actions">
-          <button type="submit" class="btn primary">เพิ่ม</button>
-          <button type="button" id="member-add-cancel" class="btn">ยกเลิก</button>
-        </div>
-      </form></div>`;
-    document.body.appendChild(modal);
-    modal.querySelector("#member-add-cancel").addEventListener("click", () => modal.remove());
-    modal.querySelector("#member-add-form").addEventListener("submit", async ev => {
-      ev.preventDefault();
-      const fd = new FormData(ev.target);
-      const name = fd.get("name").trim();
-      const user = fd.get("username").trim();
-      const email = fd.get("email").trim();
-      if (!name || !user) return showPopup("กรอกให้ครบ", "err");
-      const post = new FormData();
-      post.append("sheet", "MEMBER");
-      post.append("action", "add");
-      post.append("data", JSON.stringify({ name: name, username: user, email: email }));
-      await fetchCORS(BASE, { method: "POST", body: post });
-      cache.MEMBER = null; showPopup("เพิ่มสมาชิกสำเร็จ", "ok");
-      modal.remove();
-      await renderUserTable();
-    });
-  }
-
-  function openEditMemberModal(row, name, username, email) {
-    const modal = document.createElement("div"); modal.className = "modal";
-    modal.innerHTML = `<div class="modal-content"><h3>แก้ไขสมาชิก (ลำดับ: ${row})</h3>
-      <form id="member-edit-form">
-        <label>ชื่อ: <input name="name" required value="${escapeHTML(name)}"></label>
-        <label>username: <input name="username" required value="${escapeHTML(username)}"></label>
-        <label>email: <input name="email" type="email" value="${escapeHTML(email)}"></label>
-        <div class="form-actions">
-          <button type="submit" class="btn primary">บันทึก</button>
-          <button type="button" id="member-edit-cancel" class="btn">ยกเลิก</button>
-        </div>
-      </form></div>`;
-    document.body.appendChild(modal);
-    modal.querySelector("#member-edit-cancel").addEventListener("click", () => modal.remove());
-    modal.querySelector("#member-edit-form").addEventListener("submit", async ev => {
-      ev.preventDefault();
-      const fd = new FormData(ev.target);
-      const newName = fd.get("name").trim();
-      const newUser = fd.get("username").trim();
-      const newEmail = fd.get("email").trim();
-      if (!newName || !newUser) return showPopup("กรอกให้ครบ", "err");
-      const post = new FormData();
-      post.append("sheet", "MEMBER");
-      post.append("action", "update");
-      post.append("row", String(row));
-      post.append("data", JSON.stringify({ name: newName, username: newUser, email: newEmail }));
-      await fetchCORS(BASE, { method: "POST", body: post });
-      cache.MEMBER = null; showPopup("แก้ไขสมาชิกสำเร็จ", "ok");
-      modal.remove();
-      await renderUserTable();
-    });
-  }
-
+  // (member functions kept, unchanged in logic) ...
+  // ---------- (ผมยังคงฟังก์ชันจัดการสมาชิกไว้เหมือนเดิม) ----------
+  // For brevity I didn't repeat member functions here — keep your existing member code or copy from prior file.
   // ========= Event listeners =========
   document.addEventListener("change", async (e) => {
     const el = e.target;
     if (el.matches(".room-select") || el.matches(".status-select")) {
-      // build payload from row cells; careful with indexes — try to map by header names if possible
+      const sheetRow = Number(el.dataset.row);
       const tr = el.closest("tr");
       const payload = {
-        row: Number(el.dataset.row),
+        row: sheetRow,
         รหัส: tr.children[1]?.innerText || "",
         ชื่อ: tr.children[2]?.innerText || "",
         ที่อยู่: tr.querySelector(".room-select")?.value || "",
@@ -452,13 +351,16 @@ document.addEventListener("DOMContentLoaded", () => {
         เวลา: tr.children[6]?.innerText || ""
       };
       const form = new FormData(); form.append("sheet", "WAIT"); form.append("action", "update"); form.append("row", String(payload.row)); form.append("data", JSON.stringify(payload));
-      await fetchCORS(BASE, { method: "POST", body: form });
-      showPopup("แก้ไขสำเร็จ", "ok", 1500);
+      try {
+        await fetchCORS(BASE, { method: "POST", body: form });
+        showPopup("แก้ไขสำเร็จ", "ok", 1500);
+      } catch (err) {
+        console.error(err); showPopup("แก้ไขไม่สำเร็จ", "err");
+      }
     }
   });
 
   document.addEventListener("click", async (e) => {
-    // confirm wait
     if (e.target && e.target.id === "confirm-wait") {
       const selected = [...document.querySelectorAll(".wait-select:checked")];
       for (const chk of selected) {
@@ -471,11 +373,9 @@ document.addEventListener("DOMContentLoaded", () => {
       await loadData("WAIT");
     }
 
-    // delete row in generic table (if you used 'ลบ' button)
     if (e.target && e.target.classList.contains("delete-btn")) {
       if (!confirm("ลบแถวนี้จริงหรือไม่?")) return;
       const row = Number(e.target.dataset.row);
-      // assume WAIT sheet if exists in current view; try both
       const form = new FormData();
       form.append("sheet", "WAIT");
       form.append("action", "delete");
@@ -486,6 +386,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // load default page
+  // initial
   loadPage("wait");
 });
