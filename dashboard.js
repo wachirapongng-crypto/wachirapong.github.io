@@ -15,8 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const pageTitle = document.getElementById("page-title");
   const pageContent = document.getElementById("page-content");
 
-  const cache = { WAIT: null, DATA: null, USER: null };
-
   async function fetchJSON(url, method = "GET", body = null) {
     try {
       const opt = method === "POST"
@@ -37,8 +35,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function popup(msg, type = "ok") {
-    alert(msg); /* เอาแบบง่าย ใช้ alert แทน popup */
+  /* ---------- Loader popup แทน alert ---------- */
+  function popup() {
+    const loader = document.getElementById("loader");
+    loader.style.display = "flex";
+    setTimeout(() => loader.style.display = "none", 1200);
   }
 
   function formatDate(d) {
@@ -83,12 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 /***************************************************
- * SECTION 2 — WAIT PAGE (ตรวจสอบของที่รอ)
- * ฟีเจอร์:
- * - แก้ไขที่อยู่ / สถานะ / หมายเหตุ
- * - ย้ายลง LOG
- * - ลบ WAIT
- * - ปุ่มรีเฟรช
+ * SECTION 2 — WAIT PAGE (รอตรวจสอบ)
  ***************************************************/
   async function renderWaitPage() {
     const data = await fetchJSON(URLS.WAIT);
@@ -110,6 +106,9 @@ document.addEventListener("DOMContentLoaded", () => {
         <tbody>
     `;
 
+    const LOCATIONS = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
+    const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
+
     data.forEach((r, i) => {
       const row = i + 2;
 
@@ -117,8 +116,23 @@ document.addEventListener("DOMContentLoaded", () => {
         <tr data-row="${row}">
           <td>${r["รหัส"]}</td>
           <td>${r["ชื่อ"]}</td>
-          <td><input class="wait-loc" value="${r["ที่อยู่"] || ""}"></td>
-          <td><input class="wait-status" value="${r["สถานะ"] || ""}"></td>
+
+          <td>
+            <select class="wait-loc">
+              ${LOCATIONS.map(v => `
+                <option value="${v}" ${v === r["ที่อยู่"] ? "selected" : ""}>${v}</option>
+              `).join("")}
+            </select>
+          </td>
+
+          <td>
+            <select class="wait-status">
+              ${STATUS.map(v => `
+                <option value="${v}" ${v === r["สถานะ"] ? "selected" : ""}>${v}</option>
+              `).join("")}
+            </select>
+          </td>
+
           <td><input class="wait-note" placeholder="รายละเอียดเพิ่มเติม"></td>
           <td><button class="btn move-log">✔</button></td>
           <td><button class="btn del-wait">🗑</button></td>
@@ -130,7 +144,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("refresh-wait").onclick = renderWaitPage;
 
-    // กดปุ่มย้ายเข้า LOG
     document.querySelectorAll(".move-log").forEach(btn => {
       btn.onclick = async function () {
         const tr = this.closest("tr");
@@ -154,19 +167,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         await fetchJSON(BASE + "?sheet=LOG&action=add", "POST", body);
 
-        // ลบของใน WAIT
+        // ลบ WAIT
         const del = new FormData();
         del.append("sheet", "WAIT");
         del.append("action", "delete");
         del.append("row", row);
         await fetchJSON(BASE, "POST", del);
 
-        popup("บันทึกลง LOG แล้ว");
+        popup();
         renderWaitPage();
       };
     });
 
-    // ลบแถว WAIT
     document.querySelectorAll(".del-wait").forEach(btn => {
       btn.onclick = async function () {
         const row = this.closest("tr").dataset.row;
@@ -175,9 +187,9 @@ document.addEventListener("DOMContentLoaded", () => {
         body.append("sheet", "WAIT");
         body.append("action", "delete");
         body.append("row", row);
-        await fetchJSON(BASE, "POST", body);
 
-        popup("ลบสำเร็จ");
+        await fetchJSON(BASE, "POST", body);
+        popup();
         renderWaitPage();
       };
     });
@@ -186,10 +198,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /***************************************************
  * SECTION 3 — LIST PAGE (ข้อมูลครุภัณฑ์ทั้งหมด)
- * ฟีเจอร์:
- * - เพิ่มรายการใหม่
- * - แก้ไขรหัส/ชื่อ
- * - ลบได้
  ***************************************************/
   async function renderListPage() {
     const data = await fetchJSON(URLS.DATA);
@@ -209,6 +217,8 @@ document.addEventListener("DOMContentLoaded", () => {
             <th>ลำดับ</th>
             <th>รหัส</th>
             <th>ชื่อ</th>
+            <th>Barcode</th>
+            <th>QRCode</th>
             <th>แก้ไข</th>
             <th>ลบ</th>
           </tr>
@@ -218,11 +228,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     data.forEach((r, i) => {
       const row = i + 2;
+
       html += `
         <tr data-row="${row}">
           <td>${r["ลำดับ"]}</td>
           <td><input class="list-code" value="${r["รหัสครุภัณฑ์"]}"></td>
           <td><input class="list-name" value="${r["ชื่อครุภัณฑ์"]}"></td>
+
+          <td>${r["barcode"] || "-"}</td>
+          <td>${r["qrcode"] || "-"}</td>
+
           <td><button class="btn list-update">✔</button></td>
           <td><button class="btn list-delete">🗑</button></td>
         </tr>`;
@@ -231,7 +246,6 @@ document.addEventListener("DOMContentLoaded", () => {
     html += "</tbody></table>";
     pageContent.innerHTML = html;
 
-    // เพิ่มข้อมูลใหม่
     document.getElementById("add-item").onclick = async () => {
       const code = document.getElementById("new-code").value;
       const name = document.getElementById("new-name").value;
@@ -243,11 +257,10 @@ document.addEventListener("DOMContentLoaded", () => {
       body.append("name", name);
 
       await fetchJSON(BASE, "POST", body);
-      popup("เพิ่มสำเร็จ");
+      popup();
       renderListPage();
     };
 
-    // แก้ไข
     document.querySelectorAll(".list-update").forEach(btn => {
       btn.onclick = async function () {
         const tr = this.closest("tr");
@@ -264,11 +277,10 @@ document.addEventListener("DOMContentLoaded", () => {
         body.append("name", name);
 
         await fetchJSON(BASE, "POST", body);
-        popup("แก้ไขสำเร็จ");
+        popup();
       };
     });
 
-    // ลบ
     document.querySelectorAll(".list-delete").forEach(btn => {
       btn.onclick = async function () {
         const row = this.closest("tr").dataset.row;
@@ -279,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
         body.append("row", row);
 
         await fetchJSON(BASE, "POST", body);
-        popup("ลบแล้ว");
+        popup();
         renderListPage();
       };
     });
@@ -288,7 +300,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /***************************************************
  * SECTION 4 — USER PAGE (จัดการสมาชิก)
- * ฟีเจอร์: เพิ่ม / แก้ไข / ลบ
  ***************************************************/
   async function renderUserPage() {
     const data = await fetchJSON(URLS.USER);
@@ -298,7 +309,10 @@ document.addEventListener("DOMContentLoaded", () => {
       <div>
         <input id="u-id" placeholder="ID">
         <input id="u-pass" placeholder="Pass">
-        <input id="u-status" placeholder="Status">
+        <select id="u-status">
+          <option value="admin">admin</option>
+          <option value="employee">employee</option>
+        </select>
         <input id="u-name" placeholder="ชื่อ">
         <button id="add-user">เพิ่ม</button>
       </div>
@@ -312,11 +326,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     data.forEach((u, i) => {
       const row = i + 2;
+
       html += `
         <tr data-row="${row}">
           <td><input class="u-id" value="${u["ID"]}"></td>
           <td><input class="u-pass" value="${u["Pass"]}"></td>
-          <td><input class="u-status" value="${u["Status"]}"></td>
+
+          <td>
+            <select class="u-status">
+              <option value="admin" ${u["Status"] === "admin" ? "selected" : ""}>admin</option>
+              <option value="employee" ${u["Status"] === "employee" ? "selected" : ""}>employee</option>
+            </select>
+          </td>
+
           <td><input class="u-name" value="${u["name"]}"></td>
           <td><button class="btn up-user">✔</button></td>
           <td><button class="btn del-user">🗑</button></td>
@@ -327,7 +349,6 @@ document.addEventListener("DOMContentLoaded", () => {
     html += "</tbody></table>";
     pageContent.innerHTML = html;
 
-    // เพิ่มสมาชิก
     document.getElementById("add-user").onclick = async () => {
       const body = new FormData();
       body.append("sheet", "LOGIN");
@@ -336,12 +357,12 @@ document.addEventListener("DOMContentLoaded", () => {
       body.append("pass", document.getElementById("u-pass").value);
       body.append("status", document.getElementById("u-status").value);
       body.append("name", document.getElementById("u-name").value);
+
       await fetchJSON(BASE, "POST", body);
-      popup("เพิ่มสมาชิกสำเร็จ");
+      popup();
       renderUserPage();
     };
 
-    // อัปเดตสมาชิก
     document.querySelectorAll(".up-user").forEach(btn => {
       btn.onclick = async function () {
         const tr = this.closest("tr");
@@ -357,11 +378,10 @@ document.addEventListener("DOMContentLoaded", () => {
         body.append("name", tr.querySelector(".u-name").value);
 
         await fetchJSON(BASE, "POST", body);
-        popup("แก้ไขสำเร็จ");
+        popup();
       };
     });
 
-    // ลบสมาชิก
     document.querySelectorAll(".del-user").forEach(btn => {
       btn.onclick = async function () {
         const row = this.closest("tr").dataset.row;
@@ -372,7 +392,7 @@ document.addEventListener("DOMContentLoaded", () => {
         body.append("row", row);
 
         await fetchJSON(BASE, "POST", body);
-        popup("ลบสมาชิกแล้ว");
+        popup();
         renderUserPage();
       };
     });
