@@ -200,7 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <thead>
         <tr>
           <th>ลำดับ</th>
-          <th>รหัส</th>
+          <th>รหัสครุภัณฑ์</th>
           <th>ชื่อ</th>
           <th>Barcode</th>
           <th>QRCode</th>
@@ -213,12 +213,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   data.forEach((r, i) => {
     const row = i + 2;
+    const codeRaw = r["รหัสครุภัณฑ์"] || "";
+    const code = encodeURIComponent(codeRaw);
+    const name = r["ชื่อครุภัณฑ์"] || "";
+
+    // ใช้ URL สำหรับ Barcode และ QR Code
+    const barcodeURL = `https://barcode.tec-it.com/barcode.ashx?data=${code}&code=Code128&translate-esc=true`;
+    const qrURL = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${code}`;
+
     html += `<tr data-row="${row}">
       <td>${r["ลำดับ"]}</td>
-      <td><input class="list-code" value="${r["รหัสครุภัณฑ์"]}"></td>
-      <td><input class="list-name" value="${r["ชื่อครุภัณฑ์"]}"></td>
-      <td style="font-family: 'Libre Barcode 39'; font-size:28px;">${r["BarCode"] || "-"}</td>
-      <td>${r["QRCode"] ? `<img src="${r["QRCode"]}" width="80">` : "-"}</td>
+      <td>${codeRaw}</td>
+      <td>${name}</td>
+      <td><img src="${barcodeURL}" alt="barcode" style="height:40px;"></td>
+      <td><img src="${qrURL}" alt="qr" style="height:60px;"></td>
       <td><button class="btn list-update">✔</button></td>
       <td><button class="btn list-delete">🗑</button></td>
     </tr>`;
@@ -247,8 +255,8 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.onclick = async function() {
       const tr = this.closest("tr");
       const row = tr.dataset.row;
-      const code = tr.querySelector(".list-code").value;
-      const name = tr.querySelector(".list-name").value;
+      const code = tr.children[1].innerText; // ใช้ค่าที่แสดง
+      const name = tr.children[2].innerText;
       await showLoader("กำลังแก้ไข...");
       const body = new FormData();
       body.append("sheet", "DATA");
@@ -289,6 +297,7 @@ function hideLoader() {
   const loader = document.getElementById("loader");
   loader.style.display = "none";
 }
+
 
   /***************************************************
    * USER PAGE
