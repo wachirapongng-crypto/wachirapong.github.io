@@ -217,8 +217,8 @@ document.addEventListener("DOMContentLoaded", () => {
       <td>${r["ลำดับ"]}</td>
       <td><input class="list-code" value="${r["รหัสครุภัณฑ์"]}"></td>
       <td><input class="list-name" value="${r["ชื่อครุภัณฑ์"]}"></td>
-      <td style="font-family: 'Libre Barcode 39'; font-size:28px;">${r["barcode"] || "-"}</td>
-      <td>${r["qrcode"] ? `<img src="${r["qrcode"]}" width="80">` : "-"}</td>
+      <td style="font-family: 'Libre Barcode 39'; font-size:28px;">${r["BarCode"] || "-"}</td>
+      <td>${r["QRCode"] ? `<img src="${r["QRCode"]}" width="80">` : "-"}</td>
       <td><button class="btn list-update">✔</button></td>
       <td><button class="btn list-delete">🗑</button></td>
     </tr>`;
