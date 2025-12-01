@@ -1,5 +1,9 @@
 /***************************************************
- * dashboard.js — Updated
+ * dashboard.js — Full fixed & cleaned
+ * - single loader implementation (works with animations)
+ * - consistent fetchJSON usage (GET uses URLS.*, POST uses BASE + FormData)
+ * - move-log uses BASE + FormData (no query duplication)
+ * - safer row calculation (uses row field if returned by backend)
  ***************************************************/
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -14,36 +18,65 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const pageTitle = document.getElementById("page-title");
   const pageContent = document.getElementById("page-content");
+  const loaderEl = document.getElementById("loader");
 
+  /***************************************************
+   * fetchJSON
+   * - GET: fetch(url)
+   * - POST: fetch(url, { method: "POST", body })
+   * returns parsed JSON or [] on error
+   ***************************************************/
   async function fetchJSON(url, method = "GET", body = null) {
     try {
       const opt = method === "POST" ? { method: "POST", body } : { method: "GET" };
       const res = await fetch(url, opt);
       const text = await res.text();
-      try { return JSON.parse(text); } catch { return []; }
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        // ไม่ใช่ JSON หรือเป็นข้อความ — คืนค่า [] เพื่อหลีกเลี่ยง crash
+        return [];
+      }
     } catch (err) {
-      console.error(err);
+      console.error("fetchJSON error:", err);
       return [];
     }
   }
 
-  /* ---------- Loader ---------- */
-  async function showLoader(message="กำลังประมวลผล...") {
-    const loader = document.getElementById("loader");
-    loader.innerHTML = `<div class="loader-spinner"></div><p>${message}</p>`;
-    loader.style.display = "flex";
-    await new Promise(resolve => setTimeout(resolve, 200)); // ให้ loader render ก่อน fetch
+  /***************************************************
+   * Loader (single, reliable)
+   * - showLoader(message) sets markup, forces a frame via rAF so CSS animations can start
+   * - hideLoader() hides
+   * HTML expected: <div id="loader" style="display:none"></div>
+   ***************************************************/
+  async function showLoader(message = "กำลังประมวลผล...") {
+    if (!loaderEl) return;
+    loaderEl.innerHTML = `
+      <div class="loader-spinner" aria-hidden="true"></div>
+      <p class="loader-text">${message}</p>
+    `;
+    loaderEl.style.display = "flex";
+    // ให้ browser มีโอกาสวาด (render) loader ก่อนจะเริ่มงานหนัก
+    await new Promise((resolve) => requestAnimationFrame(resolve));
   }
 
   function hideLoader() {
-    const loader = document.getElementById("loader");
-    loader.style.display = "none";
+    if (!loaderEl) return;
+    loaderEl.style.display = "none";
   }
 
+  /***************************************************
+   * Utility
+   ***************************************************/
   function formatDate(d) {
     const dt = new Date(d);
     if (isNaN(dt)) return d;
     return `${dt.getDate().toString().padStart(2,"0")}-${(dt.getMonth()+1).toString().padStart(2,"0")}-${dt.getFullYear()+543}`;
+  }
+
+  // ใช้เมื่อ backend ให้ row id จริงมา (เช่น r._row หรือ r.row)
+  function computeRowFromData(r, i) {
+    return r && (r._row || r.row || r.__row) ? (r._row || r.row || r.__row) : (i + 2);
   }
 
   /***************************************************
@@ -78,7 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   window.loadPage = loadPage; // export globally
-  loadPage("wait"); // โหลดหน้า wait เป็น default
+  loadPage("wait"); // default
 
   /***************************************************
    * WAIT PAGE
@@ -90,7 +123,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
 
     let html = `
-      <button id="refresh-wait" class="btn">รีเฟรช</button>
+      <div style="margin-bottom:10px">
+        <button id="refresh-wait" class="btn">รีเฟรช</button>
+      </div>
       <table class="dash-table">
         <thead>
           <tr>
@@ -108,11 +143,11 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
 
     data.forEach((r,i)=>{
-      const row = i+2;
+      const row = computeRowFromData(r, i);
       html += `
       <tr data-row="${row}">
-        <td>${r["รหัส"]}</td>
-        <td>${r["ชื่อ"]}</td>
+        <td>${r["รหัส"] || ""}</td>
+        <td>${r["ชื่อ"] || ""}</td>
         <td>
           <select class="wait-loc">
             ${LOCATIONS.map(v=>`<option value="${v}" ${v===r["ที่อยู่"]?"selected":""}>${v}</option>`).join("")}
@@ -124,8 +159,8 @@ document.addEventListener("DOMContentLoaded", () => {
           </select>
         </td>
         <td><input class="wait-note" value="${r["หมายเหตุ"] || ""}" placeholder="รายละเอียดเพิ่มเติม"></td>
-        <td>${r["วันที่"]}</td>
-        <td>${r["เวลา"]}</td>
+        <td>${r["วันที่"] || ""}</td>
+        <td>${r["เวลา"] || ""}</td>
         <td><button class="btn move-log">✔</button></td>
         <td><button class="btn del-wait">🗑</button></td>
       </tr>`;
@@ -134,43 +169,53 @@ document.addEventListener("DOMContentLoaded", () => {
     html += "</tbody></table>";
     pageContent.innerHTML = html;
 
-    document.getElementById("refresh-wait").onclick = renderWaitPage;
+    // รีเฟรช
+    const refreshBtn = document.getElementById("refresh-wait");
+    if (refreshBtn) refreshBtn.onclick = renderWaitPage;
 
+    // ย้ายเข้า LOG
     document.querySelectorAll(".move-log").forEach(btn=>{
       btn.onclick = async function(){
         const tr = this.closest("tr");
         const row = tr.dataset.row;
 
         await showLoader("กำลังบันทึกลง LOG...");
+        // ให้ browser มีโอกาสวาด loader ก่อน fetch
+        await new Promise(r => requestAnimationFrame(r));
+
         const body = new FormData();
+        // ส่งเป็น POST ไปยัง BASE — server จะอ่านจาก FormData
         body.append("sheet","LOG");
         body.append("action","add");
-        body.append("code", tr.children[0].innerText);
-        body.append("name", tr.children[1].innerText);
+        body.append("code", tr.children[0].innerText || "");
+        body.append("name", tr.children[1].innerText || "");
         body.append("loc", tr.querySelector(".wait-loc").value);
         body.append("status", tr.querySelector(".wait-status").value);
         body.append("note", tr.querySelector(".wait-note").value);
-        body.append("date", tr.children[5].innerText);
-        body.append("time", tr.children[6].innerText);
+        body.append("date", tr.children[5].innerText || "");
+        body.append("time", tr.children[6].innerText || "");
 
-        await fetchJSON(BASE + "?sheet=LOG&action=add","POST",body);
+        // ส่งไป BASE โดยตรง (ไม่ใส่ query string ซ้ำ)
+        await fetchJSON(BASE, "POST", body);
 
-        // ลบ WAIT
+        // ถัดมา ลบใน WAIT (ส่ง row)
         const del = new FormData();
         del.append("sheet","WAIT");
         del.append("action","delete");
-        del.append("row",row);
-        await fetchJSON(BASE,"POST",del);
+        del.append("row", row);
+        await fetchJSON(BASE, "POST", del);
 
         hideLoader();
         await renderWaitPage();
       };
     });
 
+    // ลบรายการจาก WAIT
     document.querySelectorAll(".del-wait").forEach(btn=>{
       btn.onclick = async function(){
         const row = this.closest("tr").dataset.row;
         await showLoader("กำลังลบ...");
+        await new Promise(r => requestAnimationFrame(r));
         const body = new FormData();
         body.append("sheet","WAIT");
         body.append("action","delete");
@@ -186,118 +231,108 @@ document.addEventListener("DOMContentLoaded", () => {
    * LIST PAGE
    ***************************************************/
   async function renderListPage() {
-  const data = await fetchJSON(URLS.DATA);
+    const data = await fetchJSON(URLS.DATA);
 
-  let html = `
-    <h3>เพิ่มรายการใหม่</h3>
-    <div>
-      <input id="new-code" placeholder="รหัสครุภัณฑ์">
-      <input id="new-name" placeholder="ชื่อครุภัณฑ์">
-      <button id="add-item" class="btn">เพิ่ม</button>
-    </div>
-    <hr>
-    <table class="dash-table">
-      <thead>
-        <tr>
-          <th>ลำดับ</th>
-          <th>รหัสครุภัณฑ์</th>
-          <th>ชื่อ</th>
-          <th>Barcode</th>
-          <th>QRCode</th>
-          <th>แก้ไข</th>
-          <th>ลบ</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
+    let html = `
+      <h3>เพิ่มรายการใหม่</h3>
+      <div style="margin-bottom:10px">
+        <input id="new-code" placeholder="รหัสครุภัณฑ์">
+        <input id="new-name" placeholder="ชื่อครุภัณฑ์">
+        <button id="add-item" class="btn">เพิ่ม</button>
+      </div>
+      <hr>
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>ลำดับ</th>
+            <th>รหัสครุภัณฑ์</th>
+            <th>ชื่อ</th>
+            <th>Barcode</th>
+            <th>QRCode</th>
+            <th>แก้ไข</th>
+            <th>ลบ</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
 
-  data.forEach((r, i) => {
-    const row = i + 2;
-    const codeRaw = r["รหัสครุภัณฑ์"] || "";
-    const code = encodeURIComponent(codeRaw);
-    const name = r["ชื่อครุภัณฑ์"] || "";
+    data.forEach((r, i) => {
+      const row = computeRowFromData(r, i);
+      const codeRaw = r["รหัสครุภัณฑ์"] || "";
+      const code = encodeURIComponent(codeRaw);
+      const name = r["ชื่อครุภัณฑ์"] || "";
 
-    // ใช้ URL สำหรับ Barcode และ QR Code
-    const barcodeURL = `https://barcode.tec-it.com/barcode.ashx?data=${code}&code=Code128&translate-esc=true`;
-    const qrURL = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${code}`;
+      const barcodeURL = `https://barcode.tec-it.com/barcode.ashx?data=${code}&code=Code128&translate-esc=true`;
+      const qrURL = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${code}`;
 
-    html += `<tr data-row="${row}">
-      <td>${r["ลำดับ"]}</td>
-      <td>${codeRaw}</td>
-      <td>${name}</td>
-      <td><img src="${barcodeURL}" alt="barcode" style="height:40px;"></td>
-      <td><img src="${qrURL}" alt="qr" style="height:60px;"></td>
-      <td><button class="btn list-update">✔</button></td>
-      <td><button class="btn list-delete">🗑</button></td>
-    </tr>`;
-  });
+      html += `<tr data-row="${row}">
+        <td>${r["ลำดับ"] || (i+1)}</td>
+        <td>${codeRaw}</td>
+        <td>${name}</td>
+        <td><img src="${barcodeURL}" alt="barcode" style="height:40px;"></td>
+        <td><img src="${qrURL}" alt="qr" style="height:60px;"></td>
+        <td><button class="btn list-update">✔</button></td>
+        <td><button class="btn list-delete">🗑</button></td>
+      </tr>`;
+    });
 
-  html += "</tbody></table>";
-  pageContent.innerHTML = html;
+    html += "</tbody></table>";
+    pageContent.innerHTML = html;
 
-  // เพิ่มรายการใหม่
-  document.getElementById("add-item").onclick = async () => {
-    const code = document.getElementById("new-code").value;
-    const name = document.getElementById("new-name").value;
-    await showLoader("กำลังเพิ่ม...");
-    const body = new FormData();
-    body.append("sheet", "DATA");
-    body.append("action", "add");
-    body.append("code", code);
-    body.append("name", name);
-    await fetchJSON(BASE, "POST", body);
-    hideLoader();
-    await renderListPage();
-  };
-
-  // แก้ไข
-  document.querySelectorAll(".list-update").forEach(btn => {
-    btn.onclick = async function() {
-      const tr = this.closest("tr");
-      const row = tr.dataset.row;
-      const code = tr.children[1].innerText; // ใช้ค่าที่แสดง
-      const name = tr.children[2].innerText;
-      await showLoader("กำลังแก้ไข...");
+    // เพิ่มรายการใหม่
+    const addBtn = document.getElementById("add-item");
+    if (addBtn) addBtn.onclick = async () => {
+      const code = document.getElementById("new-code").value;
+      const name = document.getElementById("new-name").value;
+      await showLoader("กำลังเพิ่ม...");
+      await new Promise(r => requestAnimationFrame(r));
       const body = new FormData();
       body.append("sheet", "DATA");
-      body.append("action", "update");
-      body.append("row", row);
+      body.append("action", "add");
       body.append("code", code);
       body.append("name", name);
       await fetchJSON(BASE, "POST", body);
       hideLoader();
       await renderListPage();
     };
-  });
 
-  // ลบ
-  document.querySelectorAll(".list-delete").forEach(btn => {
-    btn.onclick = async function() {
-      const row = this.closest("tr").dataset.row;
-      await showLoader("กำลังลบ...");
-      const body = new FormData();
-      body.append("sheet", "DATA");
-      body.append("action", "delete");
-      body.append("row", row);
-      await fetchJSON(BASE, "POST", body);
-      hideLoader();
-      await renderListPage();
-    };
-  });
-}
+    // แก้ไข
+    document.querySelectorAll(".list-update").forEach(btn => {
+      btn.onclick = async function() {
+        const tr = this.closest("tr");
+        const row = tr.dataset.row;
+        const code = tr.children[1].innerText.trim();
+        const name = tr.children[2].innerText.trim();
+        await showLoader("กำลังแก้ไข...");
+        await new Promise(r => requestAnimationFrame(r));
+        const body = new FormData();
+        body.append("sheet", "DATA");
+        body.append("action", "update");
+        body.append("row", row);
+        body.append("code", code);
+        body.append("name", name);
+        await fetchJSON(BASE, "POST", body);
+        hideLoader();
+        await renderListPage();
+      };
+    });
 
-// Loader functions
-async function showLoader(message = "กำลังโหลด...") {
-  const loader = document.getElementById("loader");
-  loader.querySelector(".loader-text").textContent = message;
-  loader.style.display = "flex";
-}
-
-function hideLoader() {
-  const loader = document.getElementById("loader");
-  loader.style.display = "none";
-}
-
+    // ลบ
+    document.querySelectorAll(".list-delete").forEach(btn => {
+      btn.onclick = async function() {
+        const row = this.closest("tr").dataset.row;
+        await showLoader("กำลังลบ...");
+        await new Promise(r => requestAnimationFrame(r));
+        const body = new FormData();
+        body.append("sheet", "DATA");
+        body.append("action", "delete");
+        body.append("row", row);
+        await fetchJSON(BASE, "POST", body);
+        hideLoader();
+        await renderListPage();
+      };
+    });
+  }
 
   /***************************************************
    * USER PAGE
@@ -307,7 +342,7 @@ function hideLoader() {
 
     let html = `
       <h3>เพิ่มสมาชิก</h3>
-      <div>
+      <div style="margin-bottom:10px">
         <input id="u-id" placeholder="ID">
         <input id="u-pass" placeholder="Pass">
         <select id="u-status">
@@ -322,17 +357,17 @@ function hideLoader() {
     `;
 
     data.forEach((u,i)=>{
-      const row=i+2;
+      const row = computeRowFromData(u, i);
       html += `<tr data-row="${row}">
-        <td><input class="u-id" value="${u["ID"]}"></td>
-        <td><input class="u-pass" value="${u["Pass"]}"></td>
+        <td><input class="u-id" value="${u["ID"] || ""}"></td>
+        <td><input class="u-pass" value="${u["Pass"] || ""}"></td>
         <td>
           <select class="u-status">
             <option value="admin" ${u["Status"]==="admin"?"selected":""}>admin</option>
             <option value="employee" ${u["Status"]==="employee"?"selected":""}>employee</option>
           </select>
         </td>
-        <td><input class="u-name" value="${u["name"]}"></td>
+        <td><input class="u-name" value="${u["name"] || ""}"></td>
         <td><button class="btn up-user">✔</button></td>
         <td><button class="btn del-user">🗑</button></td>
       </tr>`;
@@ -341,9 +376,11 @@ function hideLoader() {
     html += "</tbody></table>";
     pageContent.innerHTML = html;
 
-    document.getElementById("add-user").onclick=async ()=>{
+    const addUserBtn = document.getElementById("add-user");
+    if (addUserBtn) addUserBtn.onclick = async () => {
       await showLoader("กำลังเพิ่มสมาชิก...");
-      const body=new FormData();
+      await new Promise(r => requestAnimationFrame(r));
+      const body = new FormData();
       body.append("sheet","LOGIN");
       body.append("action","addUser");
       body.append("id",document.getElementById("u-id").value);
@@ -360,6 +397,7 @@ function hideLoader() {
         const tr=this.closest("tr");
         const row=tr.dataset.row;
         await showLoader("กำลังแก้ไขสมาชิก...");
+        await new Promise(r => requestAnimationFrame(r));
         const body=new FormData();
         body.append("sheet","LOGIN");
         body.append("action","updateUser");
@@ -378,6 +416,7 @@ function hideLoader() {
       btn.onclick=async function(){
         const row=this.closest("tr").dataset.row;
         await showLoader("กำลังลบสมาชิก...");
+        await new Promise(r => requestAnimationFrame(r));
         const body=new FormData();
         body.append("sheet","LOGIN");
         body.append("action","deleteUser");
@@ -402,13 +441,13 @@ function hideLoader() {
 
     data.forEach(r=>{
       html+=`<tr>
-        <td>${r["รหัสครุภัณฑ์"]}</td>
-        <td>${r["ชื่อครุภัณฑ์"]}</td>
-        <td>${r["ที่เก็บ"]}</td>
-        <td>${r["สถานะ"]}</td>
-        <td>${r["รายละเอียดเพิ่มเติม"]}</td>
-        <td>${r["วันที่"]}</td>
-        <td>${r["เวลา"]}</td>
+        <td>${r["รหัสครุภัณฑ์"] || ""}</td>
+        <td>${r["ชื่อครุภัณฑ์"] || ""}</td>
+        <td>${r["ที่เก็บ"] || ""}</td>
+        <td>${r["สถานะ"] || ""}</td>
+        <td>${r["รายละเอียดเพิ่มเติม"] || ""}</td>
+        <td>${r["วันที่"] || ""}</td>
+        <td>${r["เวลา"] || ""}</td>
       </tr>`;
     });
 
@@ -422,5 +461,5 @@ function hideLoader() {
   function renderManualPage() {
     pageContent.innerHTML=`<h2>คู่มือการใช้งาน</h2><p>เพิ่มข้อความตามที่คุณต้องการ</p>`;
   }
-  loadpage("wait");
+
 });
