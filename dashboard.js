@@ -122,6 +122,28 @@ async function renderWaitPage() {
   const LOCATIONS = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
   const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
 
+  // ===== ฟังก์ชันแปลงวันที่ =====
+  function formatDate(v) {
+    if (!v) return "";
+    const d = new Date(v);
+    if (isNaN(d)) return v;
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  }
+
+  // ===== ฟังก์ชันแปลงเวลา =====
+  function formatTime(v) {
+    if (!v) return "";
+    const d = new Date(v);
+    if (isNaN(d)) return v;
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm} น.`;
+  }
+
+  // ===== HTML ตาราง =====
   let html = `
     <div style="margin-bottom:10px">
       <button id="refresh-wait" class="btn">รีเฟรช</button>
@@ -150,19 +172,24 @@ async function renderWaitPage() {
       <tr data-row="${row}">
         <td>${r["รหัส"] || ""}</td>
         <td>${r["ชื่อ"] || ""}</td>
+
         <td>
           <select class="wait-loc">
             ${LOCATIONS.map(v => `<option value="${v}" ${v === r["ที่อยู่"] ? "selected" : ""}>${v}</option>`).join("")}
           </select>
         </td>
+
         <td>
           <select class="wait-status">
             ${STATUS.map(v => `<option value="${v}" ${v === r["สถานะ"] ? "selected" : ""}>${v}</option>`).join("")}
           </select>
         </td>
+
         <td><input class="wait-note" value="${r["หมายเหตุ"] || ""}" placeholder="รายละเอียดเพิ่มเติม"></td>
-        <td>${r["วันที่"] || ""}</td>
-        <td>${r["เวลา"] || ""}</td>
+
+        <td>${formatDate(r["วันที่"])}</td>
+        <td>${formatTime(r["เวลา"])}</td>
+
         <td><button class="btn move-log">✔</button></td>
         <td><button class="btn del-wait">🗑</button></td>
       </tr>
@@ -172,23 +199,23 @@ async function renderWaitPage() {
   html += "</tbody></table>";
   pageContent.innerHTML = html;
 
-  // refresh
+  // ปุ่มรีเฟรช
   document.getElementById("refresh-wait").onclick = renderWaitPage;
 
-  // ==============================
-  //   MOVE TO LOG
-  // ==============================
+  // =====================================
+  //         MOVE TO LOG (พร้อม Popup)
+  // =====================================
   document.querySelectorAll(".move-log").forEach(btn => {
     btn.onclick = async function () {
-
       const tr = this.closest("tr");
       const row = tr.dataset.row;
 
-      await showLoader("กำลังบันทึกลง LOG...");
-      await new Promise(r => requestAnimationFrame(r));
+      // --- Popup ยืนยัน ---
+      if (!confirm("คุณยืนยันในการเพิ่มรายการนี้เข้ารายงานใช่ไหม?")) {
+        return;
+      }
 
       const body = new FormData();
-
       body.append("sheet", "LOG");
       body.append("action", "addLog");
 
@@ -202,33 +229,39 @@ async function renderWaitPage() {
 
       await fetchJSON(BASE, "POST", body);
 
-      // ลบรายการจาก WAIT
+      // ลบจาก WAIT
       const del = new FormData();
       del.append("sheet", "WAIT");
       del.append("action", "delete");
       del.append("row", row);
       await fetchJSON(BASE, "POST", del);
 
-      hideLoader();
-      renderWaitPage();
+      // Popup เพิ่มรายการสำเร็จ
+      alert("เพิ่มรายการสำเร็จ!");
+
+      // reload หน้า
+      setTimeout(() => location.reload(), 300);
     };
   });
 
-  // DELETE from WAIT
+  // =====================================
+  //         DELETE (พร้อม Popup)
+  // =====================================
   document.querySelectorAll(".del-wait").forEach(btn => {
     btn.onclick = async function () {
       const row = this.closest("tr").dataset.row;
-      await showLoader("กำลังลบ...");
-      await new Promise(r => requestAnimationFrame(r));
+
+      if (!confirm("ต้องการลบรายการนี้หรือไม่?")) return;
 
       const body = new FormData();
       body.append("sheet", "WAIT");
       body.append("action", "delete");
       body.append("row", row);
+
       await fetchJSON(BASE, "POST", body);
 
-      hideLoader();
-      renderWaitPage();
+      alert("ลบรายการสำเร็จ!");
+      setTimeout(() => location.reload(), 300);
     };
   });
 }
