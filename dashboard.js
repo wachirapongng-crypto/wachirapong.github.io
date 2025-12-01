@@ -116,46 +116,48 @@ document.addEventListener("DOMContentLoaded", () => {
   /***************************************************
    * WAIT PAGE
    ***************************************************/
-  async function renderWaitPage() {
-    const data = await fetchJSON(URLS.WAIT);
+async function renderWaitPage() {
+  const data = await fetchJSON(URLS.WAIT);
 
-    const LOCATIONS = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
-    const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
+  const LOCATIONS = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
+  const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
 
-    let html = `
-      <div style="margin-bottom:10px">
-        <button id="refresh-wait" class="btn">รีเฟรช</button>
-      </div>
-      <table class="dash-table">
-        <thead>
-          <tr>
-            <th>รหัส</th>
-            <th>ชื่อ</th>
-            <th>ที่อยู่</th>
-            <th>สถานะ</th>
-            <th>หมายเหตุ</th>
-            <th>วันที่</th>
-            <th>เวลา</th>
-            <th>ย้ายเข้ารายงาน</th>
-            <th>ลบ</th>
-          </tr>
-        </thead><tbody>
-    `;
+  let html = `
+    <div style="margin-bottom:10px">
+      <button id="refresh-wait" class="btn">รีเฟรช</button>
+    </div>
 
-    data.forEach((r,i)=>{
-      const row = computeRowFromData(r, i);
-      html += `
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>รหัส</th>
+          <th>ชื่อ</th>
+          <th>ที่อยู่</th>
+          <th>สถานะ</th>
+          <th>หมายเหตุ</th>
+          <th>วันที่</th>
+          <th>เวลา</th>
+          <th>ย้ายเข้ารายงาน</th>
+          <th>ลบ</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  data.forEach((r, i) => {
+    const row = computeRowFromData(r, i);
+    html += `
       <tr data-row="${row}">
         <td>${r["รหัส"] || ""}</td>
         <td>${r["ชื่อ"] || ""}</td>
         <td>
           <select class="wait-loc">
-            ${LOCATIONS.map(v=>`<option value="${v}" ${v===r["ที่อยู่"]?"selected":""}>${v}</option>`).join("")}
+            ${LOCATIONS.map(v => `<option value="${v}" ${v === r["ที่อยู่"] ? "selected" : ""}>${v}</option>`).join("")}
           </select>
         </td>
         <td>
           <select class="wait-status">
-            ${STATUS.map(v=>`<option value="${v}" ${v===r["สถานะ"]?"selected":""}>${v}</option>`).join("")}
+            ${STATUS.map(v => `<option value="${v}" ${v === r["สถานะ"] ? "selected" : ""}>${v}</option>`).join("")}
           </select>
         </td>
         <td><input class="wait-note" value="${r["หมายเหตุ"] || ""}" placeholder="รายละเอียดเพิ่มเติม"></td>
@@ -163,70 +165,73 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${r["เวลา"] || ""}</td>
         <td><button class="btn move-log">✔</button></td>
         <td><button class="btn del-wait">🗑</button></td>
-      </tr>`;
-    });
+      </tr>
+    `;
+  });
 
-    html += "</tbody></table>";
-    pageContent.innerHTML = html;
+  html += "</tbody></table>";
+  pageContent.innerHTML = html;
 
-    // รีเฟรช
-    const refreshBtn = document.getElementById("refresh-wait");
-    if (refreshBtn) refreshBtn.onclick = renderWaitPage;
+  // refresh
+  document.getElementById("refresh-wait").onclick = renderWaitPage;
 
-    // ย้ายเข้า LOG
-    document.querySelectorAll(".move-log").forEach(btn=>{
-      btn.onclick = async function(){
-        const tr = this.closest("tr");
-        const row = tr.dataset.row;
+  // ==============================
+  //   MOVE TO LOG
+  // ==============================
+  document.querySelectorAll(".move-log").forEach(btn => {
+    btn.onclick = async function () {
 
-        await showLoader("กำลังบันทึกลง LOG...");
-        // ให้ browser มีโอกาสวาด loader ก่อน fetch
-        await new Promise(r => requestAnimationFrame(r));
+      const tr = this.closest("tr");
+      const row = tr.dataset.row;
 
-        const body = new FormData();
-        // ส่งเป็น POST ไปยัง BASE — server จะอ่านจาก FormData
-        body.append("sheet","LOG");
-        body.append("action","add");
-        body.append("code", tr.children[0].innerText || "");
-        body.append("name", tr.children[1].innerText || "");
-        body.append("loc", tr.querySelector(".wait-loc").value);
-        body.append("status", tr.querySelector(".wait-status").value);
-        body.append("note", tr.querySelector(".wait-note").value);
-        body.append("date", tr.children[5].innerText || "");
-        body.append("time", tr.children[6].innerText || "");
+      await showLoader("กำลังบันทึกลง LOG...");
+      await new Promise(r => requestAnimationFrame(r));
 
-        // ส่งไป BASE โดยตรง (ไม่ใส่ query string ซ้ำ)
-        await fetchJSON(BASE, "POST", body);
+      const body = new FormData();
 
-        // ถัดมา ลบใน WAIT (ส่ง row)
-        const del = new FormData();
-        del.append("sheet","WAIT");
-        del.append("action","delete");
-        del.append("row", row);
-        await fetchJSON(BASE, "POST", del);
+      body.append("sheet", "LOG");
+      body.append("action", "addLog");
 
-        hideLoader();
-        await renderWaitPage();
-      };
-    });
+      body.append("รหัส", tr.children[0].innerText.trim());
+      body.append("ชื่อ", tr.children[1].innerText.trim());
+      body.append("ที่อยู่", tr.querySelector(".wait-loc").value);
+      body.append("สถานะ", tr.querySelector(".wait-status").value);
+      body.append("หมายเหตุ", tr.querySelector(".wait-note").value);
+      body.append("วันที่", tr.children[5].innerText.trim());
+      body.append("เวลา", tr.children[6].innerText.trim());
 
-    // ลบรายการจาก WAIT
-    document.querySelectorAll(".del-wait").forEach(btn=>{
-      btn.onclick = async function(){
-        const row = this.closest("tr").dataset.row;
-        await showLoader("กำลังลบ...");
-        await new Promise(r => requestAnimationFrame(r));
-        const body = new FormData();
-        body.append("sheet","WAIT");
-        body.append("action","delete");
-        body.append("row",row);
-        await fetchJSON(BASE,"POST",body);
-        hideLoader();
-        await renderWaitPage();
-      };
-    });
-  }
+      await fetchJSON(BASE, "POST", body);
 
+      // ลบรายการจาก WAIT
+      const del = new FormData();
+      del.append("sheet", "WAIT");
+      del.append("action", "delete");
+      del.append("row", row);
+      await fetchJSON(BASE, "POST", del);
+
+      hideLoader();
+      renderWaitPage();
+    };
+  });
+
+  // DELETE from WAIT
+  document.querySelectorAll(".del-wait").forEach(btn => {
+    btn.onclick = async function () {
+      const row = this.closest("tr").dataset.row;
+      await showLoader("กำลังลบ...");
+      await new Promise(r => requestAnimationFrame(r));
+
+      const body = new FormData();
+      body.append("sheet", "WAIT");
+      body.append("action", "delete");
+      body.append("row", row);
+      await fetchJSON(BASE, "POST", body);
+
+      hideLoader();
+      renderWaitPage();
+    };
+  });
+}
   /***************************************************
    * LIST PAGE
    ***************************************************/
