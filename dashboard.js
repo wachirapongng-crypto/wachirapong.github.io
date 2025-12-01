@@ -122,28 +122,48 @@ async function renderWaitPage() {
   const LOCATIONS = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
   const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
 
-  // ===== ฟังก์ชันแปลงวันที่ =====
+  // ============================================
+  //   FORMAT วันที่ — รองรับทั้งเลข, ISO, ว่าง
+  // ============================================
   function formatDate(v) {
     if (!v) return "";
+
+    // กรณีเป็นตัวเลขของ Google Sheets
+    if (!isNaN(v)) {
+      const d = new Date((Number(v) - 25569) * 86400000); 
+      if (!isNaN(d)) {
+        return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1)
+          .toString().padStart(2, "0")}/${d.getFullYear()}`;
+      }
+    }
+
+    // กรณีเป็น ISO เช่น 2025-12-01T...
     const d = new Date(v);
-    if (isNaN(d)) return v;
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
+    if (!isNaN(d)) {
+      return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1)
+        .toString().padStart(2, "0")}/${d.getFullYear()}`;
+    }
+
+    return v;
   }
 
-  // ===== ฟังก์ชันแปลงเวลา =====
+  // ============================================
+  //   FORMAT เวลา — รองรับ ISO และตัวเลข
+  // ============================================
   function formatTime(v) {
     if (!v) return "";
+
     const d = new Date(v);
-    if (isNaN(d)) return v;
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mm = String(d.getMinutes()).padStart(2, "0");
+    if (isNaN(d)) return "";
+
+    const hh = d.getHours().toString().padStart(2, "0");
+    const mm = d.getMinutes().toString().padStart(2, "0");
     return `${hh}:${mm} น.`;
   }
 
-  // ===== HTML ตาราง =====
+  // ============================================
+  //   สร้างตาราง
+  // ============================================
   let html = `
     <div style="margin-bottom:10px">
       <button id="refresh-wait" class="btn">รีเฟรช</button>
@@ -202,18 +222,26 @@ async function renderWaitPage() {
   // ปุ่มรีเฟรช
   document.getElementById("refresh-wait").onclick = renderWaitPage;
 
-  // =====================================
-  //         MOVE TO LOG (พร้อม Popup)
-  // =====================================
+  // ============================================
+  //   MOVE TO LOG — ใช้ SweetAlert2
+  // ============================================
   document.querySelectorAll(".move-log").forEach(btn => {
     btn.onclick = async function () {
+
       const tr = this.closest("tr");
       const row = tr.dataset.row;
 
-      // --- Popup ยืนยัน ---
-      if (!confirm("คุณยืนยันในการเพิ่มรายการนี้เข้ารายงานใช่ไหม?")) {
-        return;
-      }
+      // Confirm
+      const ok = await Swal.fire({
+        title: "ยืนยันการเพิ่มเข้ารายงาน?",
+        text: "คุณต้องการย้ายข้อมูลนี้เข้าสู่รายงานหรือไม่",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "ยืนยัน",
+        cancelButtonText: "ยกเลิก"
+      });
+
+      if (!ok.isConfirmed) return;
 
       const body = new FormData();
       body.append("sheet", "LOG");
@@ -236,13 +264,53 @@ async function renderWaitPage() {
       del.append("row", row);
       await fetchJSON(BASE, "POST", del);
 
-      // Popup เพิ่มรายการสำเร็จ
-      alert("เพิ่มรายการสำเร็จ!");
+      await Swal.fire({
+        title: "สำเร็จ!",
+        text: "เพิ่มรายการเข้ารายงานแล้ว",
+        icon: "success",
+        timer: 1200,
+        showConfirmButton: false
+      });
 
-      // reload หน้า
-      setTimeout(() => location.reload(), 300);
+      location.reload();
     };
   });
+
+  // ============================================
+  //   DELETE — ใช้ SweetAlert2
+  // ============================================
+  document.querySelectorAll(".del-wait").forEach(btn => {
+    btn.onclick = async function () {
+      const row = this.closest("tr").dataset.row;
+
+      const ok = await Swal.fire({
+        title: "ต้องการลบรายการนี้?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "ลบ",
+        cancelButtonText: "ยกเลิก"
+      });
+
+      if (!ok.isConfirmed) return;
+
+      const body = new FormData();
+      body.append("sheet", "WAIT");
+      body.append("action", "delete");
+      body.append("row", row);
+
+      await fetchJSON(BASE, "POST", body);
+
+      await Swal.fire({
+        title: "ลบสำเร็จ!",
+        icon: "success",
+        timer: 1000,
+        showConfirmButton: false
+      });
+
+      location.reload();
+    };
+  });
+}
 
   // =====================================
   //         DELETE (พร้อม Popup)
