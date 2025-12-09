@@ -1,5 +1,6 @@
 /***************************************************
- * dashboard.js — Full fixed & cleaned (v2.0 with SweetAlert2)
+ * dashboard.js — Full fixed & cleaned (v2.1 with SweetAlert2)
+ * - Fixes: Menu call issue, Date format, List filter, Edit form, Refresh
  ***************************************************/
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -15,12 +16,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const pageTitle = document.getElementById("page-title");
   const pageContent = document.getElementById("page-content");
-  // loaderEl ถูกแทนที่ด้วย SweetAlert2
-  // const loaderEl = document.getElementById("loader"); 
 
   /***************************************************
    * fetchJSON
-   * returns parsed JSON or [] on error
    ***************************************************/
   async function fetchJSON(url, method = "GET", body = null) {
     try {
@@ -30,7 +28,6 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         return JSON.parse(text);
       } catch (e) {
-        // ไม่ใช่ JSON หรือเป็นข้อความ — คืนค่า [] เพื่อหลีกเลี่ยง crash
         return [];
       }
     } catch (err) {
@@ -68,11 +65,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isNaN(d)) return v;
     const day = String(d.getDate()).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear() + 543; // แปลงเป็น พ.ศ.
+    const year = d.getFullYear() + 543; 
     return `${day}/${month}/${year}`;
   }
 
-  // ฟังก์ชันแปลงเวลา (ย้ายมาเป็น global utility)
+  // ฟังก์ชันแปลงเวลา
   function formatTime(v) {
     if (!v) return "";
     const d = new Date(v);
@@ -82,15 +79,15 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${hh}:${mm} น.`;
   }
   
-  // ใช้เมื่อ backend ให้ row id จริงมา (เช่น r._row หรือ r.row)
   function computeRowFromData(r, i) {
     return r && (r._row || r.row || r.__row) ? (r._row || r.row || r.__row) : (i + 2);
   }
 
   /***************************************************
-   * ROUTER
+   * ROUTER (Fix 1: แยก loadPage สำหรับเรียกจาก HTML)
    ***************************************************/
-  async function loadPage(page) {
+  // ฟังก์ชันหลักที่ทำงานแบบ Async
+  async function loadPageInternal(page) {
     await showLoader("กำลังโหลดข้อมูล...");
     pageContent.innerHTML = "";
     if (page === "wait") {
@@ -119,9 +116,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     hideLoader();
   }
-
-  window.loadPage = loadPage; // export globally
-  loadPage("wait"); // default
+  
+  // ฟังก์ชันที่เรียกใช้จาก HTML (เพื่อป้องกันปัญหา Await/Async)
+  window.loadPage = function (page) {
+    loadPageInternal(page); 
+  }; 
+  
+  // เรียกใช้หน้าเริ่มต้น
+  window.loadPage("wait"); 
 
   /***************************************************
    * WAIT PAGE
@@ -131,14 +133,9 @@ async function renderWaitPage() {
   const data = await fetchJSON(URLS.WAIT);
   hideLoader();
 
-  // ย้ายมาใช้ฟังก์ชัน global แล้ว:
-  // function formatDate(v) ...
-  // function formatTime(v) ...
-
   const LOCATIONS = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
   const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
 
-  // ===== HTML ตาราง =====
   let html = `
     <div style="margin-bottom:10px">
       <button id="refresh-wait" class="btn">🔄 รีเฟรช</button>
@@ -182,8 +179,7 @@ async function renderWaitPage() {
 
         <td><input class="wait-note" value="${r["หมายเหตุ"] || ""}" placeholder="รายละเอียดเพิ่มเติม"></td>
 
-        <td>${formatDateTH(r["วันที่"])}</td>
-        <td>${formatTime(r["เวลา"])}</td>
+        <td>${formatDateTH(r["วันที่"])}</td> <td>${formatTime(r["เวลา"])}</td>
 
         <td><button class="btn move-log">✔</button></td>
         <td><button class="btn del-wait">🗑</button></td>
@@ -217,9 +213,7 @@ async function renderWaitPage() {
         cancelButtonText: "ยกเลิก"
       });
 
-      if (!confirmResult.isConfirmed) {
-        return;
-      }
+      if (!confirmResult.isConfirmed) return;
 
       await showLoader("กำลังย้ายข้อมูลเข้ารายงาน...");
 
@@ -232,7 +226,6 @@ async function renderWaitPage() {
       body.append("ที่อยู่", tr.querySelector(".wait-loc").value);
       body.append("สถานะ", tr.querySelector(".wait-status").value);
       body.append("หมายเหตุ", tr.querySelector(".wait-note").value);
-      // ใช้ข้อมูลที่แสดงผลอยู่แล้ว แต่เพื่อให้ง่ายและปลอดภัย ส่งค่า text ที่แสดงผล
       body.append("วันที่", tr.children[5].innerText.trim()); 
       body.append("เวลา", tr.children[6].innerText.trim());
 
@@ -288,7 +281,7 @@ async function renderWaitPage() {
       
       // Popup ลบสำเร็จ (ชั้นที่ 2)
       await Swal.fire("สำเร็จ!", "ลบรายการสำเร็จแล้ว", "success");
-      await renderWaitPage(); // reload หน้าโดยเรียกฟังก์ชัน render
+      await renderWaitPage(); 
     };
   });
 }
@@ -347,8 +340,6 @@ async function renderWaitPage() {
 
     // Fix 3.4: Refresh button handler
     document.getElementById("refresh-list").onclick = renderListPage;
-
-    // Fix 3.3: ส่วนเพิ่มรายการใหม่ถูกนำออก
 
     // Fix 3.2, 5, 6: แก้ไขด้วย SweetAlert2 Form
     document.querySelectorAll(".list-update").forEach(btn => {
@@ -617,7 +608,7 @@ async function renderWaitPage() {
       // --- Popup ยืนยัน 2 ชั้น (ชั้นที่ 1) ---
       const confirmResult = await Swal.fire({
         title: "ยืนยันการสร้างรายงาน?",
-        text: "คุณต้องการให้ระบบสร้างไฟล์ Excel รายงานหรือไม่? (Backend ต้องรองรับ 'generateReport')",
+        text: "คุณต้องการให้ระบบสร้างไฟล์ Excel รายงานหรือไม่?",
         icon: "question",
         showCancelButton: true,
         confirmButtonColor: "#17a2b8",
