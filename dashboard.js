@@ -1,12 +1,11 @@
 /***************************************************
- * dashboard.js — Full fixed & cleaned (v2.7 Final Fixes)
- * - Fixes: Confirmation button, broken Edit, missing Date/Time in Report, removed delay.
+ * dashboard.js — Full fixed & cleaned (v2.8 Final UI/Refresh Fix)
+ * - Fixes: Date/Time display in WAIT, removed Date/Time in REPORT, implemented loading message on refresh.
  ***************************************************/
 document.addEventListener("DOMContentLoaded", () => {
 
   const BASE = "https://script.google.com/macros/s/AKfycbzyOwWg00Fp9NgGg6AscrNb3uSNjHAp6d-E9Z3bjG-IalIXgm4wJpc3sFpmkY0iVlNv2w/exec";
-  // const DELAY_MS = 3000; // ไม่ใช้การหน่วงเวลาแล้ว
-
+  
   const URLS = {
     DATA: BASE + "?sheet=DATA",
     WAIT: BASE + "?sheet=WAIT",
@@ -85,17 +84,30 @@ document.addEventListener("DOMContentLoaded", () => {
     return r && (r._row || r.row || r.__row) ? (r._row || r.row || r.__row) : (i + 2);
   }
 
-  // Fix 4: ฟังก์ชันแสดงผลสำเร็จและรีเฟรชทันที
-  async function showSuccessAndRefresh(message, refreshFunc) {
+  // Fix 4: ฟังก์ชันแสดงผลสำเร็จและรีเฟรชด้วย Loading Message
+  async function showSuccessAndRefresh(message, refreshFunc, loadingMessage) {
       await Swal.fire({
           title: "สำเร็จ!",
           text: message,
           icon: "success",
           showConfirmButton: false,
-          timer: 1500 // แสดงผล 1.5 วินาที ก่อนรีเฟรช
+          timer: 1000 
       });
-      // Fix 4: เรียกฟังก์ชันรีเฟรชหน้าทันที
+      // แสดง Loading Message ก่อนรีเฟรช
+      showLoadingMessage(loadingMessage); 
+      // เรียกฟังก์ชันรีเฟรช
       refreshFunc(); 
+  }
+  
+  // Fix 4: ฟังก์ชันเรียกรีเฟรชสำหรับปุ่ม
+  function handleRefresh(pageName, loadingMessage) {
+      return async () => {
+          showLoadingMessage(loadingMessage);
+          if (pageName === 'wait') await renderWaitPage();
+          else if (pageName === 'list') await renderListPage();
+          else if (pageName === 'user') await renderUserPage();
+          else if (pageName === 'report') await renderReportPage();
+      };
   }
 
   /***************************************************
@@ -145,7 +157,6 @@ document.addEventListener("DOMContentLoaded", () => {
 async function renderWaitPage() {
   const data = await fetchJSON(URLS.WAIT);
   
-  // Render Data
   const LOCATIONS = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
   const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
 
@@ -204,8 +215,8 @@ async function renderWaitPage() {
   html += "</tbody></table>";
   pageContent.innerHTML = html; // แสดงผลตาราง
 
-  // ปุ่มรีเฟรช
-  document.getElementById("refresh-wait").onclick = renderWaitPage;
+  // Fix 4: ปุ่มรีเฟรชใช้ handleRefresh
+  document.getElementById("refresh-wait").onclick = handleRefresh('wait', "กำลังโหลดข้อมูลครุภัณฑ์ที่รอตรวจสอบ...");
 
   // =====================================
   //  MOVE TO LOG
@@ -216,11 +227,11 @@ async function renderWaitPage() {
         title: "คุณแน่ใจหรือไม่?",
         text: "คุณยืนยันในการเพิ่มรายการนี้เข้ารายงานใช่ไหม?",
         icon: "warning",
-        showCancelButton: true, // Fix 1
+        showCancelButton: true,
         confirmButtonColor: "#3085d6",
         cancelButtonColor: "#d33",
         confirmButtonText: "ใช่, ยืนยัน!",
-        cancelButtonText: "ยกเลิก" // Fix 1
+        cancelButtonText: "ยกเลิก"
       });
 
       if (!confirmResult.isConfirmed) return;
@@ -250,7 +261,7 @@ async function renderWaitPage() {
         const deleteResult = await fetchJSON(BASE, "POST", del);
 
         if (logResult && deleteResult) { 
-          await showSuccessAndRefresh("เพิ่มรายการเข้ารายงานสำเร็จแล้ว", renderWaitPage);
+          await showSuccessAndRefresh("เพิ่มรายการเข้ารายงานสำเร็จแล้ว", renderWaitPage, "กำลังโหลดข้อมูลครุภัณฑ์ที่รอตรวจสอบ...");
         } else {
           await Swal.fire("ผิดพลาด!", "การดำเนินการไม่สมบูรณ์ หรือ Server ตอบกลับไม่สำเร็จ", "error");
         }
@@ -269,11 +280,11 @@ async function renderWaitPage() {
         title: "คุณแน่ใจหรือไม่?",
         text: "ต้องการลบรายการนี้หรือไม่?",
         icon: "warning",
-        showCancelButton: true, // Fix 1
+        showCancelButton: true,
         confirmButtonColor: "#d33",
         cancelButtonColor: "#3085d6",
         confirmButtonText: "ใช่, ลบทิ้ง!",
-        cancelButtonText: "ยกเลิก" // Fix 1
+        cancelButtonText: "ยกเลิก"
       });
       if (!confirmResult.isConfirmed) return;
 
@@ -285,7 +296,7 @@ async function renderWaitPage() {
         body.append("row", row);
         await fetchJSON(BASE, "POST", body);
 
-        await showSuccessAndRefresh("ลบรายการสำเร็จแล้ว", renderWaitPage);
+        await showSuccessAndRefresh("ลบรายการสำเร็จแล้ว", renderWaitPage, "กำลังโหลดข้อมูลครุภัณฑ์ที่รอตรวจสอบ...");
       } catch (e) {
         await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
@@ -348,8 +359,8 @@ async function renderWaitPage() {
     html += "</tbody></table>";
     pageContent.innerHTML = html;
 
-    // Refresh button handler
-    document.getElementById("refresh-list").onclick = renderListPage;
+    // Fix 4: ปุ่มรีเฟรชใช้ handleRefresh
+    document.getElementById("refresh-list").onclick = handleRefresh('list', "กำลังโหลดรายการครุภัณฑ์ทั้งหมด...");
 
     // Add New Item
     const addBtn = document.getElementById("add-item");
@@ -361,9 +372,9 @@ async function renderWaitPage() {
           title: "ยืนยันการเพิ่มรายการ?",
           text: `ต้องการเพิ่ม รหัส: ${code}, ชื่อ: ${name} หรือไม่?`,
           icon: "info",
-          showCancelButton: true, // Fix 1
+          showCancelButton: true,
           confirmButtonText: "ใช่, เพิ่ม",
-          cancelButtonText: "ยกเลิก" // Fix 1
+          cancelButtonText: "ยกเลิก"
       });
       if (!confirmResult.isConfirmed) return;
 
@@ -375,13 +386,13 @@ async function renderWaitPage() {
         body.append("name", name);
         await fetchJSON(BASE, "POST", body);
 
-        await showSuccessAndRefresh("เพิ่มรายการสำเร็จแล้ว", renderListPage);
+        await showSuccessAndRefresh("เพิ่มรายการสำเร็จแล้ว", renderListPage, "กำลังโหลดรายการครุภัณฑ์ทั้งหมด...");
       } catch (e) {
         await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
     };
 
-    // แก้ไข (Fix 2: กู้คืนปุ่มยกเลิกในฟอร์ม SA2)
+    // แก้ไข
     document.querySelectorAll(".list-update").forEach(btn => {
       btn.onclick = async function() {
         const tr = this.closest("tr");
@@ -399,7 +410,7 @@ async function renderWaitPage() {
                 <input id="swal-name" class="swal2-input" value="${name}">
             </div>`,
           focusConfirm: false,
-          showCancelButton: true, // Fix 2: เพิ่มปุ่มยกเลิกในฟอร์ม
+          showCancelButton: true,
           confirmButtonText: 'บันทึกการแก้ไข',
           cancelButtonText: 'ยกเลิก',
           preConfirm: () => {
@@ -410,19 +421,17 @@ async function renderWaitPage() {
           }
         });
         
-        // ถ้า formValues เป็น undefined แปลว่าผู้ใช้กดยกเลิก
         if (!formValues) return; 
         
-        // ถ้า formValues ถูกส่งมา (ผู้ใช้กดบันทึก)
         const confirmResult = await Swal.fire({
           title: "ยืนยันการแก้ไข?",
           text: `รหัส: ${formValues.code}, ชื่อ: ${formValues.name}`,
           icon: "info",
-          showCancelButton: true, // Fix 1
+          showCancelButton: true,
           confirmButtonColor: "#3085d6",
           cancelButtonColor: "#d33",
           confirmButtonText: "ใช่, แก้ไข!",
-          cancelButtonText: "ยกเลิก" // Fix 1
+          cancelButtonText: "ยกเลิก"
         });
         if (!confirmResult.isConfirmed) return;
 
@@ -435,7 +444,7 @@ async function renderWaitPage() {
             body.append("name", formValues.name);
             await fetchJSON(BASE, "POST", body);
 
-            await showSuccessAndRefresh("แก้ไขรายการสำเร็จแล้ว", renderListPage);
+            await showSuccessAndRefresh("แก้ไขรายการสำเร็จแล้ว", renderListPage, "กำลังโหลดรายการครุภัณฑ์ทั้งหมด...");
         } catch (e) {
             await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
         }
@@ -451,11 +460,11 @@ async function renderWaitPage() {
           title: "คุณแน่ใจหรือไม่?",
           text: "ต้องการลบรายการนี้อย่างถาวรใช่ไหม?",
           icon: "warning",
-          showCancelButton: true, // Fix 1
+          showCancelButton: true,
           confirmButtonColor: "#d33",
           cancelButtonColor: "#3085d6",
           confirmButtonText: "ใช่, ลบทิ้ง!",
-          cancelButtonText: "ยกเลิก" // Fix 1
+          cancelButtonText: "ยกเลิก"
         });
         if (!confirmResult.isConfirmed) return;
 
@@ -466,7 +475,7 @@ async function renderWaitPage() {
             body.append("row", row);
             await fetchJSON(BASE, "POST", body);
 
-            await showSuccessAndRefresh("ลบรายการสำเร็จแล้ว", renderListPage);
+            await showSuccessAndRefresh("ลบรายการสำเร็จแล้ว", renderListPage, "กำลังโหลดรายการครุภัณฑ์ทั้งหมด...");
         } catch (e) {
             await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
         }
@@ -528,9 +537,9 @@ async function renderWaitPage() {
         title: "ยืนยันการเพิ่มสมาชิก?",
         text: `คุณต้องการเพิ่มสมาชิก ID: ${id} นี้หรือไม่?`,
         icon: "info",
-        showCancelButton: true, // Fix 1
+        showCancelButton: true,
         confirmButtonText: "ใช่, เพิ่ม",
-        cancelButtonText: "ยกเลิก" // Fix 1
+        cancelButtonText: "ยกเลิก"
       });
       if (!confirmResult.isConfirmed) return;
 
@@ -544,7 +553,7 @@ async function renderWaitPage() {
         body.append("name",name);
         await fetchJSON(BASE,"POST",body);
 
-        await showSuccessAndRefresh("เพิ่มสมาชิกสำเร็จแล้ว", renderUserPage);
+        await showSuccessAndRefresh("เพิ่มสมาชิกสำเร็จแล้ว", renderUserPage, "กำลังโหลดรายชื่อสมาชิก...");
       } catch (e) {
         await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
@@ -561,9 +570,9 @@ async function renderWaitPage() {
           title: "ยืนยันการแก้ไขสมาชิก?",
           text: `คุณต้องการแก้ไขข้อมูลสมาชิก ID: ${id} นี้หรือไม่?`,
           icon: "info",
-          showCancelButton: true, // Fix 1
+          showCancelButton: true,
           confirmButtonText: "ใช่, แก้ไข",
-          cancelButtonText: "ยกเลิก" // Fix 1
+          cancelButtonText: "ยกเลิก"
         });
         if (!confirmResult.isConfirmed) return;
 
@@ -578,7 +587,7 @@ async function renderWaitPage() {
             body.append("name",tr.querySelector(".u-name").value);
             await fetchJSON(BASE,"POST",body);
 
-            await showSuccessAndRefresh("แก้ไขสมาชิกสำเร็จแล้ว", renderUserPage);
+            await showSuccessAndRefresh("แก้ไขสมาชิกสำเร็จแล้ว", renderUserPage, "กำลังโหลดรายชื่อสมาชิก...");
         } catch (e) {
             await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
         }
@@ -594,11 +603,11 @@ async function renderWaitPage() {
           title: "คุณแน่ใจหรือไม่?",
           text: "ต้องการลบสมาชิกนี้อย่างถาวรใช่ไหม?",
           icon: "warning",
-          showCancelButton: true, // Fix 1
+          showCancelButton: true,
           confirmButtonColor: "#d33",
           cancelButtonColor: "#3085d6",
           confirmButtonText: "ใช่, ลบทิ้ง!",
-          cancelButtonText: "ยกเลิก" // Fix 1
+          cancelButtonText: "ยกเลิก"
         });
         if (!confirmResult.isConfirmed) return;
 
@@ -609,7 +618,7 @@ async function renderWaitPage() {
             body.append("row",row);
             await fetchJSON(BASE,"POST",body);
 
-            await showSuccessAndRefresh("ลบสมาชิกสำเร็จแล้ว", renderUserPage);
+            await showSuccessAndRefresh("ลบสมาชิกสำเร็จแล้ว", renderUserPage, "กำลังโหลดรายชื่อสมาชิก...");
         } catch (e) {
             await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
         }
@@ -631,7 +640,7 @@ async function renderWaitPage() {
       <table class="dash-table"><thead><tr>
         <th>รหัสครุภัณฑ์</th><th>ชื่อครุภัณฑ์</th><th>ที่เก็บ</th><th>สถานะ</th>
         <th>รายละเอียดเพิ่มเติม</th><th>วันที่</th><th>เวลา</th> 
-      </tr></thead><tbody>`; // Fix 3: เพิ่ม <th> วันที่/เวลา </th>
+      </tr></thead><tbody>`; // Fix 3: กู้คืน <th> วันที่/เวลา </th>
 
     data.forEach(r=>{
       html+=`<tr>
