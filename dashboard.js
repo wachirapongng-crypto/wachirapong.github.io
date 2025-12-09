@@ -1,6 +1,8 @@
 /***************************************************
- * dashboard.js — Full fixed & cleaned (v2.1 with SweetAlert2)
- * - Fixes: Menu call issue, Date format, List filter, Edit form, Refresh
+ * dashboard.js — Full fixed & cleaned (v2.2 Final)
+ * - Loader Fix: SA2 only on data actions, correct stop logic.
+ * - Report Fix: Corrected table headers.
+ * - List Fix: Re-added Add New Item feature.
  ***************************************************/
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -11,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     WAIT: BASE + "?sheet=WAIT",
     LOG: BASE + "?sheet=LOG",
     USER: BASE + "?sheet=LOGIN",
-    SHOW: BASE + "?sheet=SHOW" // Fix 2.1: ใช้สำหรับรายงาน
+    SHOW: BASE + "?sheet=SHOW"
   };
 
   const pageTitle = document.getElementById("page-title");
@@ -37,9 +39,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /***************************************************
-   * Loader (Fix 4, 6: ใช้ SweetAlert2)
+   * Loader (SA2)
+   * - ใช้ SweetAlert2 สำหรับ Action (Add/Update/Delete) เท่านั้น
    ***************************************************/
   async function showLoader(message = "กำลังประมวลผล...") {
+    // ใช้ SweetAlert2
     await Swal.fire({
       title: message,
       html: '<div class="loader-spinner" style="border-top-color:#3498db; width: 40px; height: 40px; border-width: 4px; animation: spin 1s linear infinite; margin: 10px auto;"></div>',
@@ -58,18 +62,16 @@ document.addEventListener("DOMContentLoaded", () => {
   /***************************************************
    * Utility
    ***************************************************/
-  // Fix 1.1: ฟังก์ชันแปลงวันที่ (พ.ศ.)
   function formatDateTH(v) {
     if (!v) return "";
     const d = new Date(v);
     if (isNaN(d)) return v;
     const day = String(d.getDate()).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear() + 543; 
+    const year = d.getFullYear() + 543;
     return `${day}/${month}/${year}`;
   }
 
-  // ฟังก์ชันแปลงเวลา
   function formatTime(v) {
     if (!v) return "";
     const d = new Date(v);
@@ -78,17 +80,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const mm = String(d.getMinutes()).padStart(2, "0");
     return `${hh}:${mm} น.`;
   }
-  
+
   function computeRowFromData(r, i) {
     return r && (r._row || r.row || r.__row) ? (r._row || r.row || r.__row) : (i + 2);
   }
 
   /***************************************************
-   * ROUTER (Fix 1: แยก loadPage สำหรับเรียกจาก HTML)
+   * ROUTER (ปรับให้ไม่แสดง Loader ตอนเปลี่ยนเมนู)
    ***************************************************/
   // ฟังก์ชันหลักที่ทำงานแบบ Async
   async function loadPageInternal(page) {
-    await showLoader("กำลังโหลดข้อมูล...");
+    // ลบ showLoader/hideLoader ออกจาก Router
     pageContent.innerHTML = "";
     if (page === "wait") {
       pageTitle.textContent = "🕓 ครุภัณฑ์ที่รอตรวจสอบ";
@@ -114,24 +116,22 @@ document.addEventListener("DOMContentLoaded", () => {
       pageTitle.textContent = "Dashboard";
       pageContent.innerHTML = "<p>เลือกเมนูด้านซ้าย</p>";
     }
-    hideLoader();
   }
-  
-  // ฟังก์ชันที่เรียกใช้จาก HTML (เพื่อป้องกันปัญหา Await/Async)
+
+  // ฟังก์ชันที่เรียกใช้จาก HTML
   window.loadPage = function (page) {
-    loadPageInternal(page); 
-  }; 
-  
+    loadPageInternal(page);
+  };
+
   // เรียกใช้หน้าเริ่มต้น
-  window.loadPage("wait"); 
+  window.loadPage("wait");
 
   /***************************************************
    * WAIT PAGE
    ***************************************************/
 async function renderWaitPage() {
-  await showLoader("กำลังดึงรายการรอตรวจสอบ...");
+  // ไม่ต้องใช้ showLoader ตรงนี้
   const data = await fetchJSON(URLS.WAIT);
-  hideLoader();
 
   const LOCATIONS = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
   const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
@@ -179,7 +179,8 @@ async function renderWaitPage() {
 
         <td><input class="wait-note" value="${r["หมายเหตุ"] || ""}" placeholder="รายละเอียดเพิ่มเติม"></td>
 
-        <td>${formatDateTH(r["วันที่"])}</td> <td>${formatTime(r["เวลา"])}</td>
+        <td>${formatDateTH(r["วันที่"])}</td>
+        <td>${formatTime(r["เวลา"])}</td>
 
         <td><button class="btn move-log">✔</button></td>
         <td><button class="btn del-wait">🗑</button></td>
@@ -194,14 +195,11 @@ async function renderWaitPage() {
   document.getElementById("refresh-wait").onclick = renderWaitPage;
 
   // =====================================
-  //  MOVE TO LOG (Fix 1.2, 5, 6: SweetAlert2 & No location.reload)
+  //  MOVE TO LOG (ใช้ SA2)
   // =====================================
   document.querySelectorAll(".move-log").forEach(btn => {
     btn.onclick = async function () {
-      const tr = this.closest("tr");
-      const row = tr.dataset.row;
-
-      // --- Popup ยืนยัน 2 ชั้น (ชั้นที่ 1) ---
+      // Confirmation (ชั้นที่ 1)
       const confirmResult = await Swal.fire({
         title: "คุณแน่ใจหรือไม่?",
         text: "คุณยืนยันในการเพิ่มรายการนี้เข้ารายงานใช่ไหม?",
@@ -215,47 +213,48 @@ async function renderWaitPage() {
 
       if (!confirmResult.isConfirmed) return;
 
-      await showLoader("กำลังย้ายข้อมูลเข้ารายงาน...");
+      await showLoader("กำลังย้ายข้อมูลเข้ารายงาน..."); // Start Loader
 
-      const body = new FormData();
-      body.append("sheet", "LOG");
-      body.append("action", "addLog");
+      try {
+        const tr = this.closest("tr");
+        const row = tr.dataset.row;
+        // ... (data collection) ...
+        const body = new FormData();
+        body.append("sheet", "LOG");
+        body.append("action", "addLog");
+        body.append("รหัส", tr.children[0].innerText.trim());
+        body.append("ชื่อ", tr.children[1].innerText.trim());
+        body.append("ที่อยู่", tr.querySelector(".wait-loc").value);
+        body.append("สถานะ", tr.querySelector(".wait-status").value);
+        body.append("หมายเหตุ", tr.querySelector(".wait-note").value);
+        body.append("วันที่", tr.children[5].innerText.trim());
+        body.append("เวลา", tr.children[6].innerText.trim());
 
-      body.append("รหัส", tr.children[0].innerText.trim());
-      body.append("ชื่อ", tr.children[1].innerText.trim());
-      body.append("ที่อยู่", tr.querySelector(".wait-loc").value);
-      body.append("สถานะ", tr.querySelector(".wait-status").value);
-      body.append("หมายเหตุ", tr.querySelector(".wait-note").value);
-      body.append("วันที่", tr.children[5].innerText.trim()); 
-      body.append("เวลา", tr.children[6].innerText.trim());
+        await fetchJSON(BASE, "POST", body);
 
-      await fetchJSON(BASE, "POST", body);
+        // ลบจาก WAIT
+        const del = new FormData();
+        del.append("sheet", "WAIT");
+        del.append("action", "delete");
+        del.append("row", row);
+        await fetchJSON(BASE, "POST", del);
 
-      // ลบจาก WAIT
-      const del = new FormData();
-      del.append("sheet", "WAIT");
-      del.append("action", "delete");
-      del.append("row", row);
-      await fetchJSON(BASE, "POST", del);
-
-      hideLoader();
-      
-      // Popup เพิ่มรายการสำเร็จ (ชั้นที่ 2)
-      await Swal.fire("สำเร็จ!", "เพิ่มรายการเข้ารายงานสำเร็จแล้ว", "success");
-
-      // Fix 1.2: reload หน้าโดยเรียกฟังก์ชัน render
-      await renderWaitPage();
+        hideLoader(); // Stop Loader
+        await Swal.fire("สำเร็จ!", "เพิ่มรายการเข้ารายงานสำเร็จแล้ว", "success");
+        await renderWaitPage(); // Refresh
+      } catch (e) {
+        hideLoader(); // Stop Loader
+        await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการย้ายข้อมูล", "error");
+      }
     };
   });
 
   // =====================================
-  //  DELETE (Fix 5, 6: SweetAlert2 & No location.reload)
+  //  DELETE (ใช้ SA2)
   // =====================================
   document.querySelectorAll(".del-wait").forEach(btn => {
     btn.onclick = async function () {
-      const row = this.closest("tr").dataset.row;
-
-      // --- Popup ยืนยัน 2 ชั้น (ชั้นที่ 1) ---
+      // Confirmation (ชั้นที่ 1)
       const confirmResult = await Swal.fire({
         title: "คุณแน่ใจหรือไม่?",
         text: "ต้องการลบรายการนี้หรือไม่?",
@@ -268,37 +267,46 @@ async function renderWaitPage() {
       });
       if (!confirmResult.isConfirmed) return;
 
-      await showLoader("กำลังลบรายการ...");
+      await showLoader("กำลังลบรายการ..."); // Start Loader
 
-      const body = new FormData();
-      body.append("sheet", "WAIT");
-      body.append("action", "delete");
-      body.append("row", row);
+      try {
+        const row = this.closest("tr").dataset.row;
+        const body = new FormData();
+        body.append("sheet", "WAIT");
+        body.append("action", "delete");
+        body.append("row", row);
 
-      await fetchJSON(BASE, "POST", body);
+        await fetchJSON(BASE, "POST", body);
 
-      hideLoader();
-      
-      // Popup ลบสำเร็จ (ชั้นที่ 2)
-      await Swal.fire("สำเร็จ!", "ลบรายการสำเร็จแล้ว", "success");
-      await renderWaitPage(); 
+        hideLoader(); // Stop Loader
+        await Swal.fire("สำเร็จ!", "ลบรายการสำเร็จแล้ว", "success");
+        await renderWaitPage(); // Refresh
+      } catch (e) {
+        hideLoader(); // Stop Loader
+        await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการลบข้อมูล", "error");
+      }
     };
   });
 }
   /***************************************************
-   * LIST PAGE (Fix 3: Filter, Remove Add, Edit Form, Refresh)
+   * LIST PAGE (Fix 3: Re-add Add New Item)
    ***************************************************/
   async function renderListPage() {
-    await showLoader("กำลังดึงรายการครุภัณฑ์ทั้งหมด...");
+    // ไม่ต้องใช้ showLoader ตรงนี้
     const data = await fetchJSON(URLS.DATA);
 
-    // Fix 3.1: กรองแถวที่ไม่มีรหัสครุภัณฑ์ (ถือเป็นแถวสูตรหรือว่าง)
+    // กรองแถวที่ไม่มีรหัสครุภัณฑ์ (ถือเป็นแถวสูตรหรือว่าง)
     const filteredData = data.filter(r => r["รหัสครุภัณฑ์"] && r["รหัสครุภัณฑ์"].toString().trim() !== "");
 
     let html = `
-      <div style="margin-bottom:10px">
-        <button id="refresh-list" class="btn">🔄 รีเฟรช</button> </div>
-      
+      <h3>เพิ่มรายการใหม่</h3> <div style="margin-bottom:10px">
+        <input id="new-code" placeholder="รหัสครุภัณฑ์">
+        <input id="new-name" placeholder="ชื่อครุภัณฑ์">
+        <button id="add-item" class="btn">เพิ่ม</button>
+        <button id="refresh-list" class="btn">🔄 รีเฟรช</button>
+      </div>
+      <hr>
+
       <table class="dash-table">
         <thead>
           <tr>
@@ -314,7 +322,7 @@ async function renderWaitPage() {
         <tbody>
     `;
 
-    filteredData.forEach((r, i) => { // ใช้ filteredData
+    filteredData.forEach((r, i) => {
       const row = computeRowFromData(r, i);
       const codeRaw = r["รหัสครุภัณฑ์"] || "";
       const code = encodeURIComponent(codeRaw);
@@ -336,20 +344,54 @@ async function renderWaitPage() {
 
     html += "</tbody></table>";
     pageContent.innerHTML = html;
-    hideLoader();
 
-    // Fix 3.4: Refresh button handler
+    // Refresh button handler
     document.getElementById("refresh-list").onclick = renderListPage;
 
-    // Fix 3.2, 5, 6: แก้ไขด้วย SweetAlert2 Form
+    // Add New Item (ใช้ SA2)
+    const addBtn = document.getElementById("add-item");
+    if (addBtn) addBtn.onclick = async () => {
+      const code = document.getElementById("new-code").value;
+      const name = document.getElementById("new-name").value;
+
+      const confirmResult = await Swal.fire({
+          title: "ยืนยันการเพิ่มรายการ?",
+          text: `ต้องการเพิ่ม รหัส: ${code}, ชื่อ: ${name} หรือไม่?`,
+          icon: "info",
+          showCancelButton: true,
+          confirmButtonText: "ใช่, เพิ่ม",
+          cancelButtonText: "ยกเลิก"
+      });
+      if (!confirmResult.isConfirmed) return;
+
+      await showLoader("กำลังเพิ่มรายการ..."); // Start Loader
+
+      try {
+        const body = new FormData();
+        body.append("sheet", "DATA");
+        body.append("action", "add");
+        body.append("code", code);
+        body.append("name", name);
+        await fetchJSON(BASE, "POST", body);
+
+        hideLoader(); // Stop Loader
+        await Swal.fire("สำเร็จ!", "เพิ่มรายการสำเร็จแล้ว", "success");
+        await renderListPage();
+      } catch (e) {
+        hideLoader(); // Stop Loader
+        await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการเพิ่มข้อมูล", "error");
+      }
+    };
+
+    // แก้ไขด้วย SweetAlert2 Form (ใช้ SA2)
     document.querySelectorAll(".list-update").forEach(btn => {
       btn.onclick = async function() {
+        // ... (Popup Form Logic) ...
         const tr = this.closest("tr");
         const row = tr.dataset.row;
         const code = tr.querySelector(".list-code").innerText.trim();
         const name = tr.querySelector(".list-name").innerText.trim();
 
-        // Popup Form (ชั้นที่ 1)
         const { value: formValues } = await Swal.fire({
           title: '📝 แก้ไขข้อมูลครุภัณฑ์',
           html:
@@ -385,24 +427,29 @@ async function renderWaitPage() {
             });
             if (!confirmResult.isConfirmed) return;
 
-            // Perform Update
-            await showLoader("กำลังแก้ไข...");
-            const body = new FormData();
-            body.append("sheet", "DATA");
-            body.append("action", "update");
-            body.append("row", row);
-            body.append("code", formValues.code);
-            body.append("name", formValues.name);
-            await fetchJSON(BASE, "POST", body);
-            hideLoader();
+            await showLoader("กำลังแก้ไข..."); // Start Loader
+            try {
+                // Perform Update
+                const body = new FormData();
+                body.append("sheet", "DATA");
+                body.append("action", "update");
+                body.append("row", row);
+                body.append("code", formValues.code);
+                body.append("name", formValues.name);
+                await fetchJSON(BASE, "POST", body);
 
-            await Swal.fire("สำเร็จ!", "แก้ไขรายการสำเร็จแล้ว", "success");
-            await renderListPage(); // Refresh
+                hideLoader(); // Stop Loader
+                await Swal.fire("สำเร็จ!", "แก้ไขรายการสำเร็จแล้ว", "success");
+                await renderListPage(); // Refresh
+            } catch (e) {
+                hideLoader(); // Stop Loader
+                await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการแก้ไขข้อมูล", "error");
+            }
         }
       };
     });
 
-    // ลบ (Fix 5, 6: SweetAlert2)
+    // ลบ (ใช้ SA2)
     document.querySelectorAll(".list-delete").forEach(btn => {
       btn.onclick = async function() {
         const row = this.closest("tr").dataset.row;
@@ -419,27 +466,31 @@ async function renderWaitPage() {
         });
         if (!confirmResult.isConfirmed) return;
 
-        await showLoader("กำลังลบ...");
-        const body = new FormData();
-        body.append("sheet", "DATA");
-        body.append("action", "delete");
-        body.append("row", row);
-        await fetchJSON(BASE, "POST", body);
-        hideLoader();
+        await showLoader("กำลังลบ..."); // Start Loader
+        try {
+            const body = new FormData();
+            body.append("sheet", "DATA");
+            body.append("action", "delete");
+            body.append("row", row);
+            await fetchJSON(BASE, "POST", body);
 
-        await Swal.fire("สำเร็จ!", "ลบรายการสำเร็จแล้ว", "success");
-        await renderListPage(); // Refresh
+            hideLoader(); // Stop Loader
+            await Swal.fire("สำเร็จ!", "ลบรายการสำเร็จแล้ว", "success");
+            await renderListPage(); // Refresh
+        } catch (e) {
+            hideLoader(); // Stop Loader
+            await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการลบข้อมูล", "error");
+        }
       };
     });
   }
 
   /***************************************************
-   * USER PAGE (Fix 5, 6: SweetAlert2)
+   * USER PAGE
    ***************************************************/
   async function renderUserPage() {
-    await showLoader("กำลังดึงรายการสมาชิก...");
+    // ไม่ต้องใช้ showLoader ตรงนี้
     const data = await fetchJSON(URLS.USER);
-    hideLoader();
 
     let html = `
       <h3>เพิ่มสมาชิก</h3>
@@ -494,19 +545,24 @@ async function renderWaitPage() {
       });
       if (!confirmResult.isConfirmed) return;
 
-      await showLoader("กำลังเพิ่มสมาชิก...");
-      const body = new FormData();
-      body.append("sheet","LOGIN");
-      body.append("action","addUser");
-      body.append("id",id);
-      body.append("pass",pass);
-      body.append("status",status);
-      body.append("name",name);
-      await fetchJSON(BASE,"POST",body);
-      hideLoader();
-      
-      await Swal.fire("สำเร็จ!", "เพิ่มสมาชิกสำเร็จแล้ว", "success");
-      await renderUserPage();
+      await showLoader("กำลังเพิ่มสมาชิก..."); // Start Loader
+      try {
+        const body = new FormData();
+        body.append("sheet","LOGIN");
+        body.append("action","addUser");
+        body.append("id",id);
+        body.append("pass",pass);
+        body.append("status",status);
+        body.append("name",name);
+        await fetchJSON(BASE,"POST",body);
+
+        hideLoader(); // Stop Loader
+        await Swal.fire("สำเร็จ!", "เพิ่มสมาชิกสำเร็จแล้ว", "success");
+        await renderUserPage();
+      } catch (e) {
+        hideLoader(); // Stop Loader
+        await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการเพิ่มสมาชิก", "error");
+      }
     };
 
     document.querySelectorAll(".up-user").forEach(btn=>{
@@ -525,20 +581,25 @@ async function renderWaitPage() {
         });
         if (!confirmResult.isConfirmed) return;
 
-        await showLoader("กำลังแก้ไขสมาชิก...");
-        const body=new FormData();
-        body.append("sheet","LOGIN");
-        body.append("action","updateUser");
-        body.append("row",row);
-        body.append("id",tr.querySelector(".u-id").value);
-        body.append("pass",tr.querySelector(".u-pass").value);
-        body.append("status",tr.querySelector(".u-status").value);
-        body.append("name",tr.querySelector(".u-name").value);
-        await fetchJSON(BASE,"POST",body);
-        hideLoader();
+        await showLoader("กำลังแก้ไขสมาชิก..."); // Start Loader
+        try {
+            const body=new FormData();
+            body.append("sheet","LOGIN");
+            body.append("action","updateUser");
+            body.append("row",row);
+            body.append("id",tr.querySelector(".u-id").value);
+            body.append("pass",tr.querySelector(".u-pass").value);
+            body.append("status",tr.querySelector(".u-status").value);
+            body.append("name",tr.querySelector(".u-name").value);
+            await fetchJSON(BASE,"POST",body);
 
-        await Swal.fire("สำเร็จ!", "แก้ไขสมาชิกสำเร็จแล้ว", "success");
-        await renderUserPage();
+            hideLoader(); // Stop Loader
+            await Swal.fire("สำเร็จ!", "แก้ไขสมาชิกสำเร็จแล้ว", "success");
+            await renderUserPage();
+        } catch (e) {
+            hideLoader(); // Stop Loader
+            await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการแก้ไขสมาชิก", "error");
+        }
       };
     });
 
@@ -558,35 +619,41 @@ async function renderWaitPage() {
         });
         if (!confirmResult.isConfirmed) return;
 
-        await showLoader("กำลังลบสมาชิก...");
-        const body=new FormData();
-        body.append("sheet","LOGIN");
-        body.append("action","deleteUser");
-        body.append("row",row);
-        await fetchJSON(BASE,"POST",body);
-        hideLoader();
+        await showLoader("กำลังลบสมาชิก..."); // Start Loader
+        try {
+            const body=new FormData();
+            body.append("sheet","LOGIN");
+            body.append("action","deleteUser");
+            body.append("row",row);
+            await fetchJSON(BASE,"POST",body);
 
-        await Swal.fire("สำเร็จ!", "ลบสมาชิกสำเร็จแล้ว", "success");
-        await renderUserPage();
+            hideLoader(); // Stop Loader
+            await Swal.fire("สำเร็จ!", "ลบสมาชิกสำเร็จแล้ว", "success");
+            await renderUserPage();
+        } catch (e) {
+            hideLoader(); // Stop Loader
+            await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการลบสมาชิก", "error");
+        }
       };
     });
   }
 
   /***************************************************
-   * REPORT PAGE (Fix 2: ใช้ SHOW, เพิ่มปุ่มออกรายงาน)
+   * REPORT PAGE (Fix: Header Columns)
    ***************************************************/
   async function renderReportPage() {
-    await showLoader("กำลังดึงรายการรายงาน...");
-    const data = await fetchJSON(URLS.SHOW); // Fix 2.1: ดึงข้อมูลจาก Sheet SHOW
-    hideLoader();
+    // ไม่ต้องใช้ showLoader ตรงนี้
+    const data = await fetchJSON(URLS.SHOW);
 
+    // Fix: แก้หัวตารางให้แสดงตามที่ต้องการ
     let html=`
       <div style="margin-bottom:10px">
-        <button id="export-report" class="btn">⬇️ สร้างรายงาน (Excel)</button> </div>
+        <button id="export-report" class="btn">⬇️ สร้างรายงาน (Excel)</button>
+      </div>
       <table class="dash-table"><thead><tr>
         <th>รหัสครุภัณฑ์</th><th>ชื่อครุภัณฑ์</th><th>ที่เก็บ</th><th>สถานะ</th>
-        <th>รายละเอียดเพิ่มเติม</th><th>วันที่</th><th>เวลา</th>
-      </tr></thead><tbody>`;
+        <th>รายละเอียดเพิ่มเติม</th>
+      </tr></thead><tbody>`; // ลบ วันที่ และ เวลา ออก
 
     data.forEach(r=>{
       html+=`<tr>
@@ -595,17 +662,15 @@ async function renderWaitPage() {
         <td>${r["ที่เก็บ"] || ""}</td>
         <td>${r["สถานะ"] || ""}</td>
         <td>${r["รายละเอียดเพิ่มเติม"] || ""}</td>
-        <td>${r["วันที่"] || ""}</td>
-        <td>${r["เวลา"] || ""}</td>
-      </tr>`;
+      </tr>`; // ลบ <td> วันที่/เวลา ออก
     });
 
     html+="</tbody></table>";
     pageContent.innerHTML=html;
 
-    // Fix 2.2, 5, 6: Export button logic
+    // Export button logic (ใช้ SA2)
     document.getElementById("export-report").onclick = async function() {
-      // --- Popup ยืนยัน 2 ชั้น (ชั้นที่ 1) ---
+      // Confirmation (ชั้นที่ 1)
       const confirmResult = await Swal.fire({
         title: "ยืนยันการสร้างรายงาน?",
         text: "คุณต้องการให้ระบบสร้างไฟล์ Excel รายงานหรือไม่?",
@@ -618,22 +683,27 @@ async function renderWaitPage() {
       });
       if (!confirmResult.isConfirmed) return;
 
-      await showLoader("กำลังสร้างไฟล์รายงาน...");
-      const body = new FormData();
-      body.append("sheet", "SHOW"); 
-      body.append("action", "generateReport"); // ต้องมี action นี้ใน Google Apps Script
-      const result = await fetchJSON(BASE, "POST", body);
-      hideLoader();
+      await showLoader("กำลังสร้างไฟล์รายงาน..."); // Start Loader
+      try {
+        const body = new FormData();
+        body.append("sheet", "SHOW");
+        body.append("action", "generateReport");
+        const result = await fetchJSON(BASE, "POST", body);
 
-      // --- แสดงผลลัพธ์ (ชั้นที่ 2) ---
-      if (result && result.status === "success" && result.fileURL) {
-        await Swal.fire({
-          title: "สำเร็จ!", 
-          html: `สร้างรายงานเสร็จสิ้น: <a href="${result.fileURL}" target="_blank">ดาวน์โหลดไฟล์</a>`, 
-          icon: "success"
-        });
-      } else {
-        await Swal.fire("ผิดพลาด!", "ไม่สามารถสร้างรายงานได้ โปรดตรวจสอบ Backend (Apps Script ต้องมี Action: 'generateReport')", "error");
+        hideLoader(); // Stop Loader
+        // แสดงผลลัพธ์ (ชั้นที่ 2)
+        if (result && result.status === "success" && result.fileURL) {
+          await Swal.fire({
+            title: "สำเร็จ!",
+            html: `สร้างรายงานเสร็จสิ้น: <a href="${result.fileURL}" target="_blank">ดาวน์โหลดไฟล์</a>`,
+            icon: "success"
+          });
+        } else {
+          await Swal.fire("ผิดพลาด!", "ไม่สามารถสร้างรายงานได้ โปรดตรวจสอบ Backend", "error");
+        }
+      } catch (e) {
+        hideLoader(); // Stop Loader
+        await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการสร้างรายงาน", "error");
       }
     };
   }
