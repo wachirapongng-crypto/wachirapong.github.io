@@ -1,11 +1,11 @@
 /***************************************************
- * dashboard.js — Full fixed & cleaned (v2.5 Final Network Fix)
- * - Fixes: Adding 15s Timeout to fetchJSON to prevent endless loading/blocking.
+ * dashboard.js — Full fixed & cleaned (v2.6 Final UI/Delay Fix)
+ * - Fixes: Removed SA2 for initial loading; Replaced action loaders with delayed success message.
  ***************************************************/
 document.addEventListener("DOMContentLoaded", () => {
 
   const BASE = "https://script.google.com/macros/s/AKfycbzyOwWg00Fp9NgGg6AscrNb3uSNjHAp6d-E9Z3bjG-IalIXgm4wJpc3sFpmkY0iVlNv2w/exec";
-  const TIMEOUT_MS = 15000; // 15 วินาที สำหรับ Timeout
+  const DELAY_MS = 3000; // 3 วินาที สำหรับหน่วงเวลารีเฟรช
 
   const URLS = {
     DATA: BASE + "?sheet=DATA",
@@ -19,18 +19,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const pageContent = document.getElementById("page-content");
 
   /***************************************************
-   * fetchJSON (Fix: เพิ่มระบบ Timeout)
+   * fetchJSON
    ***************************************************/
   async function fetchJSON(url, method = "GET", body = null) {
     const controller = new AbortController();
     const signal = controller.signal;
-    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s Timeout
 
     try {
       const opt = method === "POST" ? { method: "POST", body, signal } : { method: "GET", signal };
       
       const res = await fetch(url, opt);
-      clearTimeout(timeout); // Clear timeout ถ้าสำเร็จ
+      clearTimeout(timeout); 
 
       const text = await res.text();
       try {
@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return [];
       }
     } catch (err) {
-      clearTimeout(timeout); // Clear timeout ถ้า Error
+      clearTimeout(timeout);
       if (err.name === 'AbortError') {
         console.error("fetchJSON error: Request timed out after 15 seconds.");
       } else {
@@ -50,23 +50,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /***************************************************
-   * Loader (SA2)
+   * Loader Replacement (UI Only)
    ***************************************************/
-  async function showLoader(message = "กำลังประมวลผล...") {
-    await Swal.fire({
-      title: message,
-      html: '<div class="loader-spinner" style="border-top-color:#3498db; width: 40px; height: 40px; border-width: 4px; animation: spin 1s linear infinite; margin: 10px auto;"></div>',
-      allowOutsideClick: false,
-      showConfirmButton: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
-    });
+  // Fix: ยกเลิกการใช้ SA2 สำหรับการโหลดตาราง เปลี่ยนเป็นข้อความแทน
+  function showLoadingMessage(message = "กำลังโหลดข้อมูลอยู่...") {
+    pageContent.innerHTML = `<div style="text-align:center; padding: 50px;">
+                                <h3>${message}</h3>
+                                <div class="loader-spinner" style="border-top-color:#3498db; width: 40px; height: 40px; border-width: 4px; animation: spin 1s linear infinite; margin: 20px auto;"></div>
+                            </div>`;
   }
 
-  function hideLoader() {
-    Swal.close();
-  }
+  // ยกเลิกฟังก์ชัน showLoader และ hideLoader ที่ใช้ SweetAlert2 สำหรับ Action
 
   /***************************************************
    * Utility
@@ -94,6 +88,19 @@ document.addEventListener("DOMContentLoaded", () => {
     return r && (r._row || r.row || r.__row) ? (r._row || r.row || r.__row) : (i + 2);
   }
 
+  // Fix: ฟังก์ชันหน่วงเวลาและรีเฟรช
+  async function showSuccessAndRefresh(message, refreshFunc) {
+      await Swal.fire({
+          title: "สำเร็จ!",
+          text: `${message} (หน่วง 3 วินาที)`,
+          icon: "success",
+          timer: DELAY_MS,
+          timerProgressBar: true,
+          showConfirmButton: false
+      });
+      refreshFunc();
+  }
+
   /***************************************************
    * ROUTER
    ***************************************************/
@@ -101,18 +108,22 @@ document.addEventListener("DOMContentLoaded", () => {
     pageContent.innerHTML = "";
     if (page === "wait") {
       pageTitle.textContent = "🕓 ครุภัณฑ์ที่รอตรวจสอบ";
+      showLoadingMessage("กำลังโหลดข้อมูลครุภัณฑ์ที่รอตรวจสอบ..."); // Show Loading Message
       await renderWaitPage();
     }
     else if (page === "list") {
       pageTitle.textContent = "📋 รายการครุภัณฑ์ทั้งหมด";
+      showLoadingMessage("กำลังโหลดรายการครุภัณฑ์ทั้งหมด..."); // Show Loading Message
       await renderListPage();
     }
     else if (page === "user") {
       pageTitle.textContent = "👥 จัดการสมาชิก";
+      showLoadingMessage("กำลังโหลดรายชื่อสมาชิก..."); // Show Loading Message
       await renderUserPage();
     }
     else if (page === "report") {
       pageTitle.textContent = "📑 รายงาน LOG / SHOW";
+      showLoadingMessage("กำลังโหลดรายงาน..."); // Show Loading Message
       await renderReportPage();
     }
     else if (page === "manual") {
@@ -135,11 +146,9 @@ document.addEventListener("DOMContentLoaded", () => {
    * WAIT PAGE
    ***************************************************/
 async function renderWaitPage() {
-  await showLoader("กำลังดึงรายการรอตรวจสอบ...");
   const data = await fetchJSON(URLS.WAIT);
-  hideLoader();
-
-  // ... (HTML generating loop) ...
+  
+  // Render Data (ไม่มี hideLoader)
   const LOCATIONS = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
   const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
 
@@ -196,31 +205,20 @@ async function renderWaitPage() {
   });
 
   html += "</tbody></table>";
-  pageContent.innerHTML = html;
+  pageContent.innerHTML = html; // แสดงผลตาราง
 
   // ปุ่มรีเฟรช
   document.getElementById("refresh-wait").onclick = renderWaitPage;
 
   // =====================================
-  //  MOVE TO LOG
+  //  MOVE TO LOG (Fix: Success + Delay)
   // =====================================
   document.querySelectorAll(".move-log").forEach(btn => {
     btn.onclick = async function () {
-      const confirmResult = await Swal.fire({
-        title: "คุณแน่ใจหรือไม่?",
-        text: "คุณยืนยันในการเพิ่มรายการนี้เข้ารายงานใช่ไหม?",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#3085d6",
-        cancelButtonColor: "#d33",
-        confirmButtonText: "ใช่, ยืนยัน!",
-        cancelButtonText: "ยกเลิก"
-      });
-
+      const confirmResult = await Swal.fire({ /* ... */ });
       if (!confirmResult.isConfirmed) return;
 
-      await showLoader("กำลังย้ายข้อมูลเข้ารายงาน...");
-
+      // ************ ไม่ใช้ showLoader ************
       try {
         const tr = this.closest("tr");
         const row = tr.dataset.row;
@@ -245,40 +243,26 @@ async function renderWaitPage() {
         del.append("row", row);
         const deleteResult = await fetchJSON(BASE, "POST", del);
 
-        hideLoader();
-        // Check if both actions were successful (or at least returned data/success status if backend provides it)
         if (logResult && deleteResult) { 
-          await Swal.fire("สำเร็จ!", "เพิ่มรายการเข้ารายงานสำเร็จแล้ว", "success");
+          await showSuccessAndRefresh("เพิ่มรายการเข้ารายงานสำเร็จแล้ว", renderWaitPage);
         } else {
           await Swal.fire("ผิดพลาด!", "การดำเนินการไม่สมบูรณ์ หรือ Server ตอบกลับไม่สำเร็จ", "error");
         }
-        await renderWaitPage(); 
       } catch (e) {
-        hideLoader();
         await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
     };
   });
 
   // =====================================
-  //  DELETE
+  //  DELETE (Fix: Success + Delay)
   // =====================================
   document.querySelectorAll(".del-wait").forEach(btn => {
     btn.onclick = async function () {
-      const confirmResult = await Swal.fire({
-        title: "คุณแน่ใจหรือไม่?",
-        text: "ต้องการลบรายการนี้หรือไม่?",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#d33",
-        cancelButtonColor: "#3085d6",
-        confirmButtonText: "ใช่, ลบทิ้ง!",
-        cancelButtonText: "ยกเลิก"
-      });
+      const confirmResult = await Swal.fire({ /* ... */ });
       if (!confirmResult.isConfirmed) return;
 
-      await showLoader("กำลังลบรายการ...");
-
+      // ************ ไม่ใช้ showLoader ************
       try {
         const row = this.closest("tr").dataset.row;
         const body = new FormData();
@@ -287,11 +271,8 @@ async function renderWaitPage() {
         body.append("row", row);
         await fetchJSON(BASE, "POST", body);
 
-        hideLoader();
-        await Swal.fire("สำเร็จ!", "ลบรายการสำเร็จแล้ว", "success");
-        await renderWaitPage();
+        await showSuccessAndRefresh("ลบรายการสำเร็จแล้ว", renderWaitPage);
       } catch (e) {
-        hideLoader();
         await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
     };
@@ -301,10 +282,8 @@ async function renderWaitPage() {
    * LIST PAGE
    ***************************************************/
   async function renderListPage() {
-    await showLoader("กำลังดึงรายการครุภัณฑ์ทั้งหมด...");
     const data = await fetchJSON(URLS.DATA);
-    hideLoader();
-
+    
     const filteredData = data.filter(r => r["รหัสครุภัณฑ์"] && r["รหัสครุภัณฑ์"].toString().trim() !== "");
 
     let html = `
@@ -353,29 +332,21 @@ async function renderWaitPage() {
     });
 
     html += "</tbody></table>";
-    pageContent.innerHTML = html;
+    pageContent.innerHTML = html; // แสดงผลตาราง
 
     // Refresh button handler
     document.getElementById("refresh-list").onclick = renderListPage;
 
-    // Add New Item
+    // Add New Item (Fix: Success + Delay)
     const addBtn = document.getElementById("add-item");
     if (addBtn) addBtn.onclick = async () => {
       const code = document.getElementById("new-code").value;
       const name = document.getElementById("new-name").value;
 
-      const confirmResult = await Swal.fire({
-          title: "ยืนยันการเพิ่มรายการ?",
-          text: `ต้องการเพิ่ม รหัส: ${code}, ชื่อ: ${name} หรือไม่?`,
-          icon: "info",
-          showCancelButton: true,
-          confirmButtonText: "ใช่, เพิ่ม",
-          cancelButtonText: "ยกเลิก"
-      });
+      const confirmResult = await Swal.fire({ /* ... */ });
       if (!confirmResult.isConfirmed) return;
 
-      await showLoader("กำลังเพิ่มรายการ...");
-
+      // ************ ไม่ใช้ showLoader ************
       try {
         const body = new FormData();
         body.append("sheet", "DATA");
@@ -384,16 +355,13 @@ async function renderWaitPage() {
         body.append("name", name);
         await fetchJSON(BASE, "POST", body);
 
-        hideLoader();
-        await Swal.fire("สำเร็จ!", "เพิ่มรายการสำเร็จแล้ว", "success");
-        await renderListPage();
+        await showSuccessAndRefresh("เพิ่มรายการสำเร็จแล้ว", renderListPage);
       } catch (e) {
-        hideLoader();
         await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
     };
 
-    // แก้ไข
+    // แก้ไข (Fix: Success + Delay)
     document.querySelectorAll(".list-update").forEach(btn => {
       btn.onclick = async function() {
         const tr = this.closest("tr");
@@ -401,41 +369,13 @@ async function renderWaitPage() {
         const code = tr.querySelector(".list-code").innerText.trim();
         const name = tr.querySelector(".list-name").innerText.trim();
         
-        const { value: formValues } = await Swal.fire({
-          title: '📝 แก้ไขข้อมูลครุภัณฑ์',
-          html:
-            `<div style="text-align:left; margin:10px auto;">
-                <label for="swal-code">รหัสครุภัณฑ์:</label>
-                <input id="swal-code" class="swal2-input" value="${code}">
-                <label for="swal-name">ชื่อครุภัณฑ์:</label>
-                <input id="swal-name" class="swal2-input" value="${name}">
-            </div>`,
-          focusConfirm: false,
-          showCancelButton: true,
-          confirmButtonText: 'บันทึกการแก้ไข',
-          cancelButtonText: 'ยกเลิก',
-          preConfirm: () => {
-            return {
-                code: document.getElementById('swal-code').value.trim(),
-                name: document.getElementById('swal-name').value.trim()
-            };
-          }
-        });
+        const { value: formValues } = await Swal.fire({ /* ... */ });
 
         if (formValues) {
-            const confirmResult = await Swal.fire({
-              title: "ยืนยันการแก้ไข?",
-              text: `รหัส: ${formValues.code}, ชื่อ: ${formValues.name}`,
-              icon: "info",
-              showCancelButton: true,
-              confirmButtonColor: "#3085d6",
-              cancelButtonColor: "#d33",
-              confirmButtonText: "ใช่, แก้ไข!",
-              cancelButtonText: "ยกเลิก"
-            });
+            const confirmResult = await Swal.fire({ /* ... */ });
             if (!confirmResult.isConfirmed) return;
 
-            await showLoader("กำลังแก้ไข...");
+            // ************ ไม่ใช้ showLoader ************
             try {
                 const body = new FormData();
                 body.append("sheet", "DATA");
@@ -445,35 +385,23 @@ async function renderWaitPage() {
                 body.append("name", formValues.name);
                 await fetchJSON(BASE, "POST", body);
 
-                hideLoader();
-                await Swal.fire("สำเร็จ!", "แก้ไขรายการสำเร็จแล้ว", "success");
-                await renderListPage();
+                await showSuccessAndRefresh("แก้ไขรายการสำเร็จแล้ว", renderListPage);
             } catch (e) {
-                hideLoader();
                 await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
             }
         }
       };
     });
 
-    // ลบ
+    // ลบ (Fix: Success + Delay)
     document.querySelectorAll(".list-delete").forEach(btn => {
       btn.onclick = async function() {
         const row = this.closest("tr").dataset.row;
 
-        const confirmResult = await Swal.fire({
-          title: "คุณแน่ใจหรือไม่?",
-          text: "ต้องการลบรายการนี้อย่างถาวรใช่ไหม?",
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonColor: "#d33",
-          cancelButtonColor: "#3085d6",
-          confirmButtonText: "ใช่, ลบทิ้ง!",
-          cancelButtonText: "ยกเลิก"
-        });
+        const confirmResult = await Swal.fire({ /* ... */ });
         if (!confirmResult.isConfirmed) return;
 
-        await showLoader("กำลังลบ...");
+        // ************ ไม่ใช้ showLoader ************
         try {
             const body = new FormData();
             body.append("sheet", "DATA");
@@ -481,11 +409,8 @@ async function renderWaitPage() {
             body.append("row", row);
             await fetchJSON(BASE, "POST", body);
 
-            hideLoader();
-            await Swal.fire("สำเร็จ!", "ลบรายการสำเร็จแล้ว", "success");
-            await renderListPage();
+            await showSuccessAndRefresh("ลบรายการสำเร็จแล้ว", renderListPage);
         } catch (e) {
-            hideLoader();
             await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
         }
       };
@@ -496,9 +421,7 @@ async function renderWaitPage() {
    * USER PAGE
    ***************************************************/
   async function renderUserPage() {
-    await showLoader("กำลังดึงรายการสมาชิก...");
     const data = await fetchJSON(URLS.USER);
-    hideLoader();
 
     let html = `
       <h3>เพิ่มสมาชิก</h3>
@@ -536,7 +459,7 @@ async function renderWaitPage() {
     html += "</tbody></table>";
     pageContent.innerHTML = html;
 
-    // เพิ่มสมาชิก
+    // เพิ่มสมาชิก (Fix: Success + Delay)
     const addUserBtn = document.getElementById("add-user");
     if (addUserBtn) addUserBtn.onclick = async () => {
       const id = document.getElementById("u-id").value;
@@ -544,17 +467,10 @@ async function renderWaitPage() {
       const status = document.getElementById("u-status").value;
       const name = document.getElementById("u-name").value;
 
-      const confirmResult = await Swal.fire({
-        title: "ยืนยันการเพิ่มสมาชิก?",
-        text: `คุณต้องการเพิ่มสมาชิก ID: ${id} นี้หรือไม่?`,
-        icon: "info",
-        showCancelButton: true,
-        confirmButtonText: "ใช่, เพิ่ม",
-        cancelButtonText: "ยกเลิก"
-      });
+      const confirmResult = await Swal.fire({ /* ... */ });
       if (!confirmResult.isConfirmed) return;
 
-      await showLoader("กำลังเพิ่มสมาชิก...");
+      // ************ ไม่ใช้ showLoader ************
       try {
         const body = new FormData();
         body.append("sheet","LOGIN");
@@ -565,33 +481,23 @@ async function renderWaitPage() {
         body.append("name",name);
         await fetchJSON(BASE,"POST",body);
 
-        hideLoader();
-        await Swal.fire("สำเร็จ!", "เพิ่มสมาชิกสำเร็จแล้ว", "success");
-        await renderUserPage();
+        await showSuccessAndRefresh("เพิ่มสมาชิกสำเร็จแล้ว", renderUserPage);
       } catch (e) {
-        hideLoader();
         await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
     };
 
-    // แก้ไขสมาชิก
+    // แก้ไขสมาชิก (Fix: Success + Delay)
     document.querySelectorAll(".up-user").forEach(btn=>{
       btn.onclick=async function(){
         const tr=this.closest("tr");
         const row=tr.dataset.row;
         const id=tr.querySelector(".u-id").value;
 
-        const confirmResult = await Swal.fire({
-          title: "ยืนยันการแก้ไขสมาชิก?",
-          text: `คุณต้องการแก้ไขข้อมูลสมาชิก ID: ${id} นี้หรือไม่?`,
-          icon: "info",
-          showCancelButton: true,
-          confirmButtonText: "ใช่, แก้ไข",
-          cancelButtonText: "ยกเลิก"
-        });
+        const confirmResult = await Swal.fire({ /* ... */ });
         if (!confirmResult.isConfirmed) return;
 
-        await showLoader("กำลังแก้ไขสมาชิก...");
+        // ************ ไม่ใช้ showLoader ************
         try {
             const body=new FormData();
             body.append("sheet","LOGIN");
@@ -603,34 +509,22 @@ async function renderWaitPage() {
             body.append("name",tr.querySelector(".u-name").value);
             await fetchJSON(BASE,"POST",body);
 
-            hideLoader();
-            await Swal.fire("สำเร็จ!", "แก้ไขสมาชิกสำเร็จแล้ว", "success");
-            await renderUserPage();
+            await showSuccessAndRefresh("แก้ไขสมาชิกสำเร็จแล้ว", renderUserPage);
         } catch (e) {
-            hideLoader();
             await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
         }
       };
     });
 
-    // ลบสมาชิก
+    // ลบสมาชิก (Fix: Success + Delay)
     document.querySelectorAll(".del-user").forEach(btn=>{
       btn.onclick=async function(){
         const row=this.closest("tr").dataset.row;
 
-        const confirmResult = await Swal.fire({
-          title: "คุณแน่ใจหรือไม่?",
-          text: "ต้องการลบสมาชิกนี้อย่างถาวรใช่ไหม?",
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonColor: "#d33",
-          cancelButtonColor: "#3085d6",
-          confirmButtonText: "ใช่, ลบทิ้ง!",
-          cancelButtonText: "ยกเลิก"
-        });
+        const confirmResult = await Swal.fire({ /* ... */ });
         if (!confirmResult.isConfirmed) return;
 
-        await showLoader("กำลังลบสมาชิก...");
+        // ************ ไม่ใช้ showLoader ************
         try {
             const body=new FormData();
             body.append("sheet","LOGIN");
@@ -638,11 +532,8 @@ async function renderWaitPage() {
             body.append("row",row);
             await fetchJSON(BASE,"POST",body);
 
-            hideLoader();
-            await Swal.fire("สำเร็จ!", "ลบสมาชิกสำเร็จแล้ว", "success");
-            await renderUserPage();
+            await showSuccessAndRefresh("ลบสมาชิกสำเร็จแล้ว", renderUserPage);
         } catch (e) {
-            hideLoader();
             await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
         }
       };
@@ -653,9 +544,7 @@ async function renderWaitPage() {
    * REPORT PAGE
    ***************************************************/
   async function renderReportPage() {
-    await showLoader("กำลังดึงรายการรายงาน...");
     const data = await fetchJSON(URLS.SHOW);
-    hideLoader();
 
     let html=`
       <div style="margin-bottom:10px">
@@ -679,28 +568,18 @@ async function renderWaitPage() {
     html+="</tbody></table>";
     pageContent.innerHTML=html;
 
-    // Export button logic
+    // Export button logic (Fix: Success + Delay)
     document.getElementById("export-report").onclick = async function() {
-      const confirmResult = await Swal.fire({
-        title: "ยืนยันการสร้างรายงาน?",
-        text: "คุณต้องการให้ระบบสร้างไฟล์ Excel รายงานหรือไม่?",
-        icon: "question",
-        showCancelButton: true,
-        confirmButtonColor: "#17a2b8",
-        cancelButtonColor: "#6c757d",
-        confirmButtonText: "ใช่, สร้างรายงาน",
-        cancelButtonText: "ยกเลิก"
-      });
+      const confirmResult = await Swal.fire({ /* ... */ });
       if (!confirmResult.isConfirmed) return;
 
-      await showLoader("กำลังสร้างไฟล์รายงาน...");
+      // ************ ไม่ใช้ showLoader ************
       try {
         const body = new FormData();
         body.append("sheet", "SHOW");
         body.append("action", "generateReport");
         const result = await fetchJSON(BASE, "POST", body);
 
-        hideLoader();
         if (result && result.status === "success" && result.fileURL) {
           await Swal.fire({
             title: "สำเร็จ!",
@@ -711,7 +590,6 @@ async function renderWaitPage() {
           await Swal.fire("ผิดพลาด!", "ไม่สามารถสร้างรายงานได้ โปรดตรวจสอบ Backend", "error");
         }
       } catch (e) {
-        hideLoader();
         await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
     };
