@@ -1,10 +1,11 @@
 /***************************************************
- * dashboard.js — Full fixed & cleaned (v2.4 Final Menu Fix)
- * - Fixes: Restoring correct menu call structure.
+ * dashboard.js — Full fixed & cleaned (v2.5 Final Network Fix)
+ * - Fixes: Adding 15s Timeout to fetchJSON to prevent endless loading/blocking.
  ***************************************************/
 document.addEventListener("DOMContentLoaded", () => {
 
   const BASE = "https://script.google.com/macros/s/AKfycbzyOwWg00Fp9NgGg6AscrNb3uSNjHAp6d-E9Z3bjG-IalIXgm4wJpc3sFpmkY0iVlNv2w/exec";
+  const TIMEOUT_MS = 15000; // 15 วินาที สำหรับ Timeout
 
   const URLS = {
     DATA: BASE + "?sheet=DATA",
@@ -18,12 +19,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const pageContent = document.getElementById("page-content");
 
   /***************************************************
-   * fetchJSON
+   * fetchJSON (Fix: เพิ่มระบบ Timeout)
    ***************************************************/
   async function fetchJSON(url, method = "GET", body = null) {
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
     try {
-      const opt = method === "POST" ? { method: "POST", body } : { method: "GET" };
+      const opt = method === "POST" ? { method: "POST", body, signal } : { method: "GET", signal };
+      
       const res = await fetch(url, opt);
+      clearTimeout(timeout); // Clear timeout ถ้าสำเร็จ
+
       const text = await res.text();
       try {
         return JSON.parse(text);
@@ -31,7 +39,12 @@ document.addEventListener("DOMContentLoaded", () => {
         return [];
       }
     } catch (err) {
-      console.error("fetchJSON error:", err);
+      clearTimeout(timeout); // Clear timeout ถ้า Error
+      if (err.name === 'AbortError') {
+        console.error("fetchJSON error: Request timed out after 15 seconds.");
+      } else {
+        console.error("fetchJSON error:", err);
+      }
       return [];
     }
   }
@@ -82,9 +95,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /***************************************************
-   * ROUTER (Fix: Menu call structure)
+   * ROUTER
    ***************************************************/
-  // ฟังก์ชันหลักที่ทำงานแบบ Async (สำหรับเรียกจาก loadPage)
   async function loadPageInternal(page) {
     pageContent.innerHTML = "";
     if (page === "wait") {
@@ -113,23 +125,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Fix: ใช้ฟังก์ชันนี้ในการ Export เพื่อรองรับการเรียกจาก HTML (onclick)
   window.loadPage = function (page) {
-    // เรียกใช้ฟังก์ชันหลักแบบไม่รอ (Non-blocking)
     loadPageInternal(page);
   };
 
-  // เรียกใช้หน้าเริ่มต้น
   window.loadPage("wait");
 
   /***************************************************
    * WAIT PAGE
    ***************************************************/
 async function renderWaitPage() {
-  await showLoader("กำลังดึงรายการรอตรวจสอบ..."); // Start Loader
+  await showLoader("กำลังดึงรายการรอตรวจสอบ...");
   const data = await fetchJSON(URLS.WAIT);
-  hideLoader(); // Stop Loader
+  hideLoader();
 
+  // ... (HTML generating loop) ...
   const LOCATIONS = ["501","502","503","401","401A","401B","401C","402","403","404","405","ห้องพักครู","301","302"];
   const STATUS = ["ใช้งานได้","ชำรุด","เสื่อมสภาพ","หมดอายุการใช้งาน","ไม่รองรับการใช้งาน"];
 
@@ -226,21 +236,26 @@ async function renderWaitPage() {
         body.append("หมายเหตุ", tr.querySelector(".wait-note").value);
         body.append("วันที่", tr.children[5].innerText.trim());
         body.append("เวลา", tr.children[6].innerText.trim());
-        await fetchJSON(BASE, "POST", body);
+        const logResult = await fetchJSON(BASE, "POST", body);
 
         // Fetch DELETE
         const del = new FormData();
         del.append("sheet", "WAIT");
         del.append("action", "delete");
         del.append("row", row);
-        await fetchJSON(BASE, "POST", del);
+        const deleteResult = await fetchJSON(BASE, "POST", del);
 
         hideLoader();
-        await Swal.fire("สำเร็จ!", "เพิ่มรายการเข้ารายงานสำเร็จแล้ว", "success");
+        // Check if both actions were successful (or at least returned data/success status if backend provides it)
+        if (logResult && deleteResult) { 
+          await Swal.fire("สำเร็จ!", "เพิ่มรายการเข้ารายงานสำเร็จแล้ว", "success");
+        } else {
+          await Swal.fire("ผิดพลาด!", "การดำเนินการไม่สมบูรณ์ หรือ Server ตอบกลับไม่สำเร็จ", "error");
+        }
         await renderWaitPage(); 
       } catch (e) {
         hideLoader();
-        await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการย้ายข้อมูล", "error");
+        await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
     };
   });
@@ -277,7 +292,7 @@ async function renderWaitPage() {
         await renderWaitPage();
       } catch (e) {
         hideLoader();
-        await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการลบข้อมูล", "error");
+        await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
     };
   });
@@ -286,9 +301,9 @@ async function renderWaitPage() {
    * LIST PAGE
    ***************************************************/
   async function renderListPage() {
-    await showLoader("กำลังดึงรายการครุภัณฑ์ทั้งหมด..."); // Start Loader
+    await showLoader("กำลังดึงรายการครุภัณฑ์ทั้งหมด...");
     const data = await fetchJSON(URLS.DATA);
-    hideLoader(); // Stop Loader
+    hideLoader();
 
     const filteredData = data.filter(r => r["รหัสครุภัณฑ์"] && r["รหัสครุภัณฑ์"].toString().trim() !== "");
 
@@ -374,7 +389,7 @@ async function renderWaitPage() {
         await renderListPage();
       } catch (e) {
         hideLoader();
-        await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการเพิ่มข้อมูล", "error");
+        await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
     };
 
@@ -435,7 +450,7 @@ async function renderWaitPage() {
                 await renderListPage();
             } catch (e) {
                 hideLoader();
-                await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการแก้ไขข้อมูล", "error");
+                await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
             }
         }
       };
@@ -471,7 +486,7 @@ async function renderWaitPage() {
             await renderListPage();
         } catch (e) {
             hideLoader();
-            await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการลบข้อมูล", "error");
+            await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
         }
       };
     });
@@ -481,9 +496,9 @@ async function renderWaitPage() {
    * USER PAGE
    ***************************************************/
   async function renderUserPage() {
-    await showLoader("กำลังดึงรายการสมาชิก..."); // Start Loader
+    await showLoader("กำลังดึงรายการสมาชิก...");
     const data = await fetchJSON(URLS.USER);
-    hideLoader(); // Stop Loader
+    hideLoader();
 
     let html = `
       <h3>เพิ่มสมาชิก</h3>
@@ -555,7 +570,7 @@ async function renderWaitPage() {
         await renderUserPage();
       } catch (e) {
         hideLoader();
-        await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการเพิ่มสมาชิก", "error");
+        await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
     };
 
@@ -593,7 +608,7 @@ async function renderWaitPage() {
             await renderUserPage();
         } catch (e) {
             hideLoader();
-            await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการแก้ไขสมาชิก", "error");
+            await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
         }
       };
     });
@@ -628,7 +643,7 @@ async function renderWaitPage() {
             await renderUserPage();
         } catch (e) {
             hideLoader();
-            await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการลบสมาชิก", "error");
+            await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
         }
       };
     });
@@ -638,9 +653,9 @@ async function renderWaitPage() {
    * REPORT PAGE
    ***************************************************/
   async function renderReportPage() {
-    await showLoader("กำลังดึงรายการรายงาน..."); // Start Loader
+    await showLoader("กำลังดึงรายการรายงาน...");
     const data = await fetchJSON(URLS.SHOW);
-    hideLoader(); // Stop Loader
+    hideLoader();
 
     let html=`
       <div style="margin-bottom:10px">
@@ -697,7 +712,7 @@ async function renderWaitPage() {
         }
       } catch (e) {
         hideLoader();
-        await Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการสร้างรายงาน", "error");
+        await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
       }
     };
   }
