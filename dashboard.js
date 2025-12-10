@@ -1,7 +1,7 @@
 /***************************************************
- * dashboard.js — Full fixed & cleaned (v3.0 Final Date/Scroll Fix)
- * - Fix 1: Date format D/M/YYYY (e.g., 1/10/2025) fixed.
- * - Fix 2: Added scroll capability to the main dash-table container for List Page.
+ * dashboard.js — Full fixed & cleaned (v3.1 Final Date Fix)
+ * - Fix 1: Date format D/M/YYYY (e.g., 1/10/2025) fixed again.
+ * - Fix 2: Added scroll capability to the main dash-table container.
  * - Fix 3: UI Layout for List/User Add/Edit forms fixed using Grid/Flex.
  ***************************************************/
 document.addEventListener("DOMContentLoaded", () => {
@@ -68,24 +68,27 @@ document.addEventListener("DOMContentLoaded", () => {
   function formatDateTH(v) {
     if (!v) return "";
     let d;
-
-    // 1. ลองแปลงโดยตรง (รองรับ ISO/Timestamp)
+    
+    // 1. ลองสร้าง Date จากค่าที่รับมาโดยตรง (รองรับ ISO/Timestamp)
     d = new Date(v);
 
-    // 2. ถ้าแปลงไม่สำเร็จ และค่ามีรูปแบบ D/M/YYYY (เช่น 1/10/2025) ให้แปลงเป็น YYYY-M-D ก่อน
+    // 2. ถ้ายังเป็น Invalid Date และมีรูปแบบ D/M/YYYY (เช่น 1/10/2025)
+    // ให้แปลงเป็น YYYY/M/D เพื่อให้ new Date() ทำงานได้
     if (isNaN(d.getTime())) {
-      const parts = v.split('/');
+      const parts = String(v).split('/');
       if (parts.length === 3) {
-        // parts[0] = D, parts[1] = M, parts[2] = YYYY
-        const isoString = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-        d = new Date(isoString);
+        // สร้าง String ในรูปแบบ YYYY/M/D
+        const isoLikeString = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        d = new Date(isoLikeString);
       }
     }
 
+    // 3. ถ้ายังแปลงไม่สำเร็จ หรือปีที่ได้มาผิดปกติ
     if (isNaN(d.getTime()) || d.getFullYear() < 2000) {
-      return v; // คืนค่าเดิมถ้าแปลงไม่สำเร็จ
+      return v; // คืนค่าเดิม
     }
 
+    // แปลงเป็น พ.ศ. และรูปแบบ วัน/เดือน/ปี
     const day = String(d.getDate()).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear() + 543;
@@ -204,7 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     data.forEach((r, i) => {
       const row = computeRowFromData(r, i);
-      // Fix 1: ใช้ formatDateTH และ formatTime แสดง วันที่/เวลา
+      // ใช้ formatDateTH ที่แก้ไขแล้ว
       html += `
         <tr data-row="${row}">
           <td>${r["รหัส"] || ""}</td>
@@ -389,7 +392,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const { value: formValues } = await Swal.fire({
         title: '➕ เพิ่มรายการครุภัณฑ์ใหม่',
         html:
-          // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข (ปรับจากรูปที่แนบมา)
+          // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข
           `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; padding: 10px 20px; width: 100%;">
               <div style="grid-column: 1 / 2;">
                   <label for="swal-code" style="font-weight: bold; display: block; margin-bottom: 5px;">รหัสครุภัณฑ์:</label>
@@ -454,7 +457,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const { value: formValues } = await Swal.fire({
           title: '📝 แก้ไขข้อมูลครุภัณฑ์',
           html:
-            // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข (ปรับจากรูปที่แนบมา)
+            // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข
             `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; padding: 10px 20px; width: 100%;">
                 <div style="grid-column: 1 / 2;">
                     <label for="swal-code" style="font-weight: bold; display: block; margin-bottom: 5px;">รหัสครุภัณฑ์:</label>
@@ -596,7 +599,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const { value: formValues } = await Swal.fire({
         title: '➕ เพิ่มสมาชิกใหม่',
         html:
-          // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข (ปรับจากรูปที่แนบมา)
+          // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข
           `<div style="display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
               <label for="swal-id" style="align-self: center; font-weight: bold;">ID:</label>
               <input id="swal-id" class="swal2-input" placeholder="ID" style="margin: 0; padding: 10px;">
@@ -674,7 +677,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const { value: formValues } = await Swal.fire({
           title: '📝 แก้ไขสมาชิก',
           html:
-            // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข (ปรับจากรูปที่แนบมา)
+            // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข
             `<div style="display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
                 <label for="swal-id" style="align-self: center; font-weight: bold;">ID:</label>
                 <input id="swal-id" class="swal2-input" value="${id}" style="margin: 0; padding: 10px;">
@@ -858,7 +861,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <ul>
         <li><strong>เพิ่มรายการใหม่:</strong> กดปุ่ม **➕ เพิ่มรายการใหม่** จะมีหน้าต่างขึ้นมาให้กรอก **รหัสครุภัณฑ์** และ **ชื่อครุภัณฑ์**</li>
         <li><strong>แก้ไข (📝):</strong> กดปุ่มแก้ไข จะมีหน้าต่างขึ้นมาให้แก้ไข **รหัสครุภัณฑ์** และ **ชื่อครุภัณฑ์**</li>
-        <li><strong>ลบ (🗑):</strong> ลบรายการครุภัณฑ์นั้นอย่างถาวร</li>
+        <li><strong>ลบ (🗑):** ลบรายการครุภัณฑ์นั้นอย่างถาวร</li>
         <li><strong>Barcode/QRCode:</strong> ภาพ Barcode และ QR Code ถูกสร้างขึ้นจาก **รหัสครุภัณฑ์** ที่อยู่ในตาราง</li>
         <li><strong>รีเฟรช (🔄):</strong> โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์</li>
       </ul>
@@ -867,7 +870,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <p>จัดการบัญชีผู้ใช้งานระบบ</p>
       <ul>
         <li><strong>เพิ่มสมาชิกใหม่:</strong> กดปุ่ม **➕ เพิ่มสมาชิกใหม่** จะมีหน้าต่างขึ้นมาให้กรอก **ID**, **Pass**, **Status** (admin/employee) และ **ชื่อ**</li>
-        <li><strong>แก้ไข (📝):** กดปุ่มแก้ไข จะมีหน้าต่างขึ้นมาให้แก้ไขข้อมูลสมาชิกทั้งหมด</li>
+        <li><strong>แก้ไข (📝):</strong> กดปุ่มแก้ไข จะมีหน้าต่างขึ้นมาให้แก้ไขข้อมูลสมาชิกทั้งหมด</li>
         <li><strong>ลบ (🗑):</strong> ลบสมาชิกนั้นออกจากระบบอย่างถาวร</li>
         <li><strong>รีเฟรช (🔄):</strong> โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์</li>
       </ul>
