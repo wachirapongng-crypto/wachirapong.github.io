@@ -1,7 +1,7 @@
 /***************************************************
- * dashboard.js — Full fixed & cleaned (v2.9 Final UI/Layout Fix)
- * - Fix 1: Date/Time display in WAIT fixed.
- * - Fix 2: Report button and backend logic restored.
+ * dashboard.js — Full fixed & cleaned (v3.0 Final Date/Scroll Fix)
+ * - Fix 1: Date format D/M/YYYY (e.g., 1/10/2025) fixed.
+ * - Fix 2: Added scroll capability to the main dash-table container for List Page.
  * - Fix 3: UI Layout for List/User Add/Edit forms fixed using Grid/Flex.
  ***************************************************/
 document.addEventListener("DOMContentLoaded", () => {
@@ -64,14 +64,22 @@ document.addEventListener("DOMContentLoaded", () => {
   /***************************************************
     * Utility
     ***************************************************/
-  // Fix 1: ปรับปรุง formatDateTH ให้สามารถจัดการรูปแบบวันที่/เวลาที่หลากหลายขึ้นและแสดงผลถูกต้อง
+  // Fix 1: ปรับปรุง formatDateTH ให้รองรับรูปแบบ D/M/YYYY
   function formatDateTH(v) {
     if (!v) return "";
-    let d = new Date(v);
+    let d;
 
+    // 1. ลองแปลงโดยตรง (รองรับ ISO/Timestamp)
+    d = new Date(v);
+
+    // 2. ถ้าแปลงไม่สำเร็จ และค่ามีรูปแบบ D/M/YYYY (เช่น 1/10/2025) ให้แปลงเป็น YYYY-M-D ก่อน
     if (isNaN(d.getTime())) {
-      // ลองแปลงรูปแบบที่อาจเป็น String ที่ถูกต้องตามมาตรฐาน ISO
-      d = new Date(v.replace(/(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3'));
+      const parts = v.split('/');
+      if (parts.length === 3) {
+        // parts[0] = D, parts[1] = M, parts[2] = YYYY
+        const isoString = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        d = new Date(isoString);
+      }
     }
 
     if (isNaN(d.getTime()) || d.getFullYear() < 2000) {
@@ -175,22 +183,23 @@ document.addEventListener("DOMContentLoaded", () => {
       <div style="margin-bottom:10px">
         <button id="refresh-wait" class="btn">🔄 รีเฟรช</button>
       </div>
-
-      <table class="dash-table">
-        <thead>
-          <tr>
-            <th>รหัส</th>
-            <th>ชื่อ</th>
-            <th>ที่อยู่</th>
-            <th>สถานะ</th>
-            <th>หมายเหตุ</th>
-            <th>วันที่</th>
-            <th>เวลา</th>
-            <th>ย้ายเข้ารายงาน</th>
-            <th>ลบ</th>
-          </tr>
-        </thead>
-        <tbody>
+      
+      <div style="overflow-x: auto;">
+        <table class="dash-table">
+          <thead>
+            <tr>
+              <th>รหัส</th>
+              <th>ชื่อ</th>
+              <th>ที่อยู่</th>
+              <th>สถานะ</th>
+              <th>หมายเหตุ</th>
+              <th>วันที่</th>
+              <th>เวลา</th>
+              <th>ย้ายเข้ารายงาน</th>
+              <th>ลบ</th>
+            </tr>
+          </thead>
+          <tbody>
     `;
 
     data.forEach((r, i) => {
@@ -224,7 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     });
 
-    html += "</tbody></table>";
+    html += "</tbody></table></div>"; // ปิด div สำหรับ scroll
     pageContent.innerHTML = html;
 
     document.getElementById("refresh-wait").onclick = handleRefresh('wait', "กำลังโหลดข้อมูลครุภัณฑ์ที่รอตรวจสอบ...");
@@ -330,20 +339,20 @@ document.addEventListener("DOMContentLoaded", () => {
         <button id="refresh-list" class="btn">🔄 รีเฟรช</button>
       </div>
       <hr>
-
-      <table class="dash-table">
-        <thead>
-          <tr>
-            <th>ลำดับ</th>
-            <th>รหัสครุภัณฑ์</th>
-            <th>ชื่อ</th>
-            <th>Barcode</th>
-            <th>QRCode</th>
-            <th>แก้ไข</th>
-            <th>ลบ</th>
-          </tr>
-        </thead>
-        <tbody>
+      
+      <div style="overflow-x: auto;"> <table class="dash-table">
+          <thead>
+            <tr>
+              <th>ลำดับ</th>
+              <th>รหัสครุภัณฑ์</th>
+              <th>ชื่อ</th>
+              <th>Barcode</th>
+              <th>QRCode</th>
+              <th>แก้ไข</th>
+              <th>ลบ</th>
+            </tr>
+          </thead>
+          <tbody>
     `;
 
     filteredData.forEach((r, i) => {
@@ -366,7 +375,7 @@ document.addEventListener("DOMContentLoaded", () => {
       </tr>`;
     });
 
-    html += "</tbody></table>";
+    html += "</tbody></table></div>"; // ปิด div สำหรับ scroll
     pageContent.innerHTML = html;
 
     document.getElementById("refresh-list").onclick = handleRefresh('list', "กำลังโหลดรายการครุภัณฑ์ทั้งหมด...");
@@ -380,13 +389,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const { value: formValues } = await Swal.fire({
         title: '➕ เพิ่มรายการครุภัณฑ์ใหม่',
         html:
-          // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข
-          `<div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
-              <label for="swal-code" style="align-self: center; font-weight: bold;">รหัสครุภัณฑ์:</label>
-              <input id="swal-code" class="swal2-input" placeholder="ระบุรหัสครุภัณฑ์" style="margin: 0; padding: 10px;">
-              
-              <label for="swal-name" style="align-self: center; font-weight: bold;">ชื่อครุภัณฑ์:</label>
-              <input id="swal-name" class="swal2-input" placeholder="ระบุชื่อครุภัณฑ์" style="margin: 0; padding: 10px;">
+          // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข (ปรับจากรูปที่แนบมา)
+          `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; padding: 10px 20px; width: 100%;">
+              <div style="grid-column: 1 / 2;">
+                  <label for="swal-code" style="font-weight: bold; display: block; margin-bottom: 5px;">รหัสครุภัณฑ์:</label>
+                  <input id="swal-code" class="swal2-input" placeholder="ระบุรหัสครุภัณฑ์" style="margin: 0; padding: 10px; width: 100%;">
+              </div>
+              <div style="grid-column: 2 / 3;">
+                  <label for="swal-name" style="font-weight: bold; display: block; margin-bottom: 5px;">ชื่อครุภัณฑ์:</label>
+                  <input id="swal-name" class="swal2-input" placeholder="ระบุชื่อครุภัณฑ์" style="margin: 0; padding: 10px; width: 100%;">
+              </div>
           </div>`,
         focusConfirm: false,
         showCancelButton: true,
@@ -442,13 +454,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const { value: formValues } = await Swal.fire({
           title: '📝 แก้ไขข้อมูลครุภัณฑ์',
           html:
-            // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข
-            `<div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
-                <label for="swal-code" style="align-self: center; font-weight: bold;">รหัสครุภัณฑ์:</label>
-                <input id="swal-code" class="swal2-input" value="${code}" style="margin: 0; padding: 10px;">
-                
-                <label for="swal-name" style="align-self: center; font-weight: bold;">ชื่อครุภัณฑ์:</label>
-                <input id="swal-name" class="swal2-input" value="${name}" style="margin: 0; padding: 10px;">
+            // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข (ปรับจากรูปที่แนบมา)
+            `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; padding: 10px 20px; width: 100%;">
+                <div style="grid-column: 1 / 2;">
+                    <label for="swal-code" style="font-weight: bold; display: block; margin-bottom: 5px;">รหัสครุภัณฑ์:</label>
+                    <input id="swal-code" class="swal2-input" value="${code}" style="margin: 0; padding: 10px; width: 100%;">
+                </div>
+                <div style="grid-column: 2 / 3;">
+                    <label for="swal-name" style="font-weight: bold; display: block; margin-bottom: 5px;">ชื่อครุภัณฑ์:</label>
+                    <input id="swal-name" class="swal2-input" value="${name}" style="margin: 0; padding: 10px; width: 100%;">
+                </div>
             </div>`,
           focusConfirm: false,
           showCancelButton: true,
@@ -541,6 +556,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <button id="add-user" class="btn">➕ เพิ่มสมาชิกใหม่</button>
         <button id="refresh-user" class="btn">🔄 รีเฟรช</button>
       </div><hr>
+      <div style="overflow-x: auto;">
       <table class="dash-table">
         <thead>
           <tr>
@@ -567,7 +583,7 @@ document.addEventListener("DOMContentLoaded", () => {
       </tr>`;
     });
 
-    html += "</tbody></table>";
+    html += "</tbody></table></div>";
     pageContent.innerHTML = html;
 
     document.getElementById("refresh-user").onclick = handleRefresh('user', "กำลังโหลดรายชื่อสมาชิก...");
@@ -580,8 +596,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const { value: formValues } = await Swal.fire({
         title: '➕ เพิ่มสมาชิกใหม่',
         html:
-          // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข
-          `<div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
+          // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข (ปรับจากรูปที่แนบมา)
+          `<div style="display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
               <label for="swal-id" style="align-self: center; font-weight: bold;">ID:</label>
               <input id="swal-id" class="swal2-input" placeholder="ID" style="margin: 0; padding: 10px;">
               
@@ -589,7 +605,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <input id="swal-pass" class="swal2-input" placeholder="Password" style="margin: 0; padding: 10px;">
               
               <label for="swal-status" style="align-self: center; font-weight: bold;">Status:</label>
-              <select id="swal-status" class="swal2-select" style="margin: 0; padding: 10px; width: auto; font-size: inherit;">
+              <select id="swal-status" class="swal2-select" style="margin: 0; padding: 10px; width: 100%; font-size: inherit;">
                 <option value="admin">admin</option>
                 <option value="employee">employee</option>
               </select>
@@ -658,8 +674,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const { value: formValues } = await Swal.fire({
           title: '📝 แก้ไขสมาชิก',
           html:
-            // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข
-            `<div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
+            // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข (ปรับจากรูปที่แนบมา)
+            `<div style="display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
                 <label for="swal-id" style="align-self: center; font-weight: bold;">ID:</label>
                 <input id="swal-id" class="swal2-input" value="${id}" style="margin: 0; padding: 10px;">
                 
@@ -667,7 +683,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <input id="swal-pass" class="swal2-input" value="${pass}" style="margin: 0; padding: 10px;">
                 
                 <label for="swal-status" style="align-self: center; font-weight: bold;">Status:</label>
-                <select id="swal-status" class="swal2-select" style="margin: 0; padding: 10px; width: auto; font-size: inherit;">
+                <select id="swal-status" class="swal2-select" style="margin: 0; padding: 10px; width: 100%; font-size: inherit;">
                   <option value="admin" ${status === "admin" ? "selected" : ""}>admin</option>
                   <option value="employee" ${status === "employee" ? "selected" : ""}>employee</option>
                 </select>
@@ -757,7 +773,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /***************************************************
-    * REPORT PAGE (Fix 2: กู้คืนปุ่ม Export)
+    * REPORT PAGE
     ***************************************************/
   async function renderReportPage() {
     const data = await fetchJSON(URLS.SHOW);
@@ -766,10 +782,11 @@ document.addEventListener("DOMContentLoaded", () => {
       <div style="margin-bottom:10px">
         <button id="export-report" class="btn">⬇️ สร้างรายงาน (Excel)</button>
       </div>
+      <div style="overflow-x: auto;">
       <table class="dash-table"><thead><tr>
         <th>รหัสครุภัณฑ์</th><th>ชื่อครุภัณฑ์</th><th>ที่เก็บ</th><th>สถานะ</th>
         <th>รายละเอียดเพิ่มเติม</th><th>วันที่</th><th>เวลา</th>
-      </tr></thead><tbody>`; // Fix 2: กู้คืน <th> วันที่/เวลา </th>
+      </tr></thead><tbody>`;
 
     data.forEach(r => {
       html += `<tr>
@@ -781,10 +798,9 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${r["วันที่"] || ""}</td> <td>${r["เวลา"] || ""}</td> </tr>`;
     });
 
-    html += "</tbody></table>";
+    html += "</tbody></table></div>";
     pageContent.innerHTML = html;
 
-    // Fix 2: กู้คืน Export button logic
     document.getElementById("export-report").onclick = async function () {
       const confirmResult = await Swal.fire({
         title: "ยืนยันการสร้างรายงาน?",
@@ -802,7 +818,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const body = new FormData();
         body.append("sheet", "SHOW");
         body.append("action", "generateReport");
-        const result = await fetchJSON(BASE, "POST", body); // โค้ดนี้จะเรียกฟังก์ชัน generateReport ใน GAS
+        const result = await fetchJSON(BASE, "POST", body);
 
         if (result && result.status === "success" && result.fileURL) {
           await Swal.fire({
@@ -851,7 +867,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <p>จัดการบัญชีผู้ใช้งานระบบ</p>
       <ul>
         <li><strong>เพิ่มสมาชิกใหม่:</strong> กดปุ่ม **➕ เพิ่มสมาชิกใหม่** จะมีหน้าต่างขึ้นมาให้กรอก **ID**, **Pass**, **Status** (admin/employee) และ **ชื่อ**</li>
-        <li><strong>แก้ไข (📝):</strong> กดปุ่มแก้ไข จะมีหน้าต่างขึ้นมาให้แก้ไขข้อมูลสมาชิกทั้งหมด</li>
+        <li><strong>แก้ไข (📝):** กดปุ่มแก้ไข จะมีหน้าต่างขึ้นมาให้แก้ไขข้อมูลสมาชิกทั้งหมด</li>
         <li><strong>ลบ (🗑):</strong> ลบสมาชิกนั้นออกจากระบบอย่างถาวร</li>
         <li><strong>รีเฟรช (🔄):</strong> โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์</li>
       </ul>
