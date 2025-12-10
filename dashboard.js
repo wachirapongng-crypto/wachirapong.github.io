@@ -1,7 +1,8 @@
 /***************************************************
- * dashboard.js — Full fixed & cleaned (v2.8 Final UI/Refresh Fix)
- * - Fixes: Date/Time display in WAIT, removed Date/Time in REPORT, implemented loading message on refresh.
- * - NEW: Wait/List/User structure unified. New Add Item/User modal form.
+ * dashboard.js — Full fixed & cleaned (v2.9 Final UI/Layout Fix)
+ * - Fix 1: Date/Time display in WAIT fixed.
+ * - Fix 2: Report button and backend logic restored.
+ * - Fix 3: UI Layout for List/User Add/Edit forms fixed using Grid/Flex.
  ***************************************************/
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -27,7 +28,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const timeout = setTimeout(() => controller.abort(), 15000); // 15s Timeout
 
     try {
-      // ปรับปรุงการส่ง POST: FormData จะถูกส่งไปตามปกติ
       const opt = method === "POST" ? { method: "POST", body, signal } : { method: "GET", signal };
 
       const res = await fetch(url, opt);
@@ -37,7 +37,6 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         return JSON.parse(text);
       } catch (e) {
-        // อาจเป็นข้อความตอบกลับที่ไม่ใช่ JSON หรือ JSON ว่างเปล่า
         console.warn("fetchJSON: Response is not valid JSON, returning []. Text:", text.slice(0, 100));
         return [];
       }
@@ -65,11 +64,20 @@ document.addEventListener("DOMContentLoaded", () => {
   /***************************************************
     * Utility
     ***************************************************/
+  // Fix 1: ปรับปรุง formatDateTH ให้สามารถจัดการรูปแบบวันที่/เวลาที่หลากหลายขึ้นและแสดงผลถูกต้อง
   function formatDateTH(v) {
     if (!v) return "";
-    // Fix 1: สร้าง Date object จากค่าที่รับมา
-    const d = new Date(v);
-    if (isNaN(d)) return v;
+    let d = new Date(v);
+
+    if (isNaN(d.getTime())) {
+      // ลองแปลงรูปแบบที่อาจเป็น String ที่ถูกต้องตามมาตรฐาน ISO
+      d = new Date(v.replace(/(\d{4})\/(\d{2})\/(\d{2})/, '$1-$2-$3'));
+    }
+
+    if (isNaN(d.getTime()) || d.getFullYear() < 2000) {
+      return v; // คืนค่าเดิมถ้าแปลงไม่สำเร็จ
+    }
+
     const day = String(d.getDate()).padStart(2, "0");
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear() + 543;
@@ -78,9 +86,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function formatTime(v) {
     if (!v) return "";
-    // Fix 1: สร้าง Date object จากค่าที่รับมา
     const d = new Date(v);
-    if (isNaN(d)) return v;
+    if (isNaN(d.getTime())) return v;
     const hh = String(d.getHours()).padStart(2, "0");
     const mm = String(d.getMinutes()).padStart(2, "0");
     return `${hh}:${mm} น.`;
@@ -99,9 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showConfirmButton: false,
       timer: 1000
     });
-    // แสดง Loading Message ก่อนรีเฟรช
     showLoadingMessage(loadingMessage);
-    // เรียกฟังก์ชันรีเฟรช
     refreshFunc();
   }
 
@@ -155,7 +160,6 @@ document.addEventListener("DOMContentLoaded", () => {
     loadPageInternal(page);
   };
 
-  // เริ่มต้นที่หน้า "wait"
   window.loadPage("wait");
 
   /***************************************************
@@ -180,8 +184,8 @@ document.addEventListener("DOMContentLoaded", () => {
             <th>ที่อยู่</th>
             <th>สถานะ</th>
             <th>หมายเหตุ</th>
-            <th>วันที่</th> 
-            <th>เวลา</th> 
+            <th>วันที่</th>
+            <th>เวลา</th>
             <th>ย้ายเข้ารายงาน</th>
             <th>ลบ</th>
           </tr>
@@ -221,13 +225,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     html += "</tbody></table>";
-    pageContent.innerHTML = html; // แสดงผลตาราง
+    pageContent.innerHTML = html;
 
-    // ปุ่มรีเฟรชใช้ handleRefresh
     document.getElementById("refresh-wait").onclick = handleRefresh('wait', "กำลังโหลดข้อมูลครุภัณฑ์ที่รอตรวจสอบ...");
 
     // =====================================
-    // MOVE TO LOG
+    // MOVE TO LOG (เหมือนเดิม)
     // =====================================
     document.querySelectorAll(".move-log").forEach(btn => {
       btn.onclick = async function () {
@@ -280,7 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // =====================================
-    // DELETE
+    // DELETE (เหมือนเดิม)
     // =====================================
     document.querySelectorAll(".del-wait").forEach(btn => {
       btn.onclick = async function () {
@@ -316,7 +319,6 @@ document.addEventListener("DOMContentLoaded", () => {
     * LIST PAGE
     ***************************************************/
   async function renderListPage() {
-    // Fix 3: ลบข้อมูลที่ฟิลด์รหัสครุภัณฑ์ว่างเปล่า
     const data = await fetchJSON(URLS.DATA);
 
     const filteredData = data.filter(r => r["รหัสครุภัณฑ์"] && r["รหัสครุภัณฑ์"].toString().trim() !== "");
@@ -350,7 +352,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const code = encodeURIComponent(codeRaw);
       const name = r["ชื่อครุภัณฑ์"] || "";
 
-      // Fix 3: แสดงภาพจาก URL ที่สร้างโดยใช้ 'รหัสครุภัณฑ์' เท่านั้น (ไม่ต้องรับค่าจาก GAS)
       const barcodeURL = `https://barcode.tec-it.com/barcode.ashx?data=${code}&code=Code128&translate-esc=true`;
       const qrURL = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${code}`;
 
@@ -368,11 +369,10 @@ document.addEventListener("DOMContentLoaded", () => {
     html += "</tbody></table>";
     pageContent.innerHTML = html;
 
-    // ปุ่มรีเฟรชใช้ handleRefresh
     document.getElementById("refresh-list").onclick = handleRefresh('list', "กำลังโหลดรายการครุภัณฑ์ทั้งหมด...");
 
     // =====================================
-    // Fix 3: Add New Item - ใช้ Popup Form
+    // Fix 3: Add New Item - ปรับปรุง Layout Form
     // =====================================
     const addBtn = document.getElementById("add-item");
     if (addBtn) addBtn.onclick = async () => {
@@ -380,11 +380,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const { value: formValues } = await Swal.fire({
         title: '➕ เพิ่มรายการครุภัณฑ์ใหม่',
         html:
-          `<div style="text-align:left; margin:10px auto;">
-              <label for="swal-code">รหัสครุภัณฑ์:</label>
-              <input id="swal-code" class="swal2-input" placeholder="ระบุรหัสครุภัณฑ์" required>
-              <label for="swal-name">ชื่อครุภัณฑ์:</label>
-              <input id="swal-name" class="swal2-input" placeholder="ระบุชื่อครุภัณฑ์" required>
+          // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข
+          `<div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
+              <label for="swal-code" style="align-self: center; font-weight: bold;">รหัสครุภัณฑ์:</label>
+              <input id="swal-code" class="swal2-input" placeholder="ระบุรหัสครุภัณฑ์" style="margin: 0; padding: 10px;">
+              
+              <label for="swal-name" style="align-self: center; font-weight: bold;">ชื่อครุภัณฑ์:</label>
+              <input id="swal-name" class="swal2-input" placeholder="ระบุชื่อครุภัณฑ์" style="margin: 0; padding: 10px;">
           </div>`,
         focusConfirm: false,
         showCancelButton: true,
@@ -419,7 +421,6 @@ document.addEventListener("DOMContentLoaded", () => {
         body.append("action", "add");
         body.append("code", formValues.code);
         body.append("name", formValues.name);
-        // Fix 3: ไม่ส่งค่า Barcode/QR Code ไป (ให้ GAS จัดการหรือปล่อยว่างไว้)
         await fetchJSON(BASE, "POST", body);
 
         await showSuccessAndRefresh("เพิ่มรายการสำเร็จแล้ว", renderListPage, "กำลังโหลดรายการครุภัณฑ์ทั้งหมด...");
@@ -429,7 +430,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // =====================================
-    // แก้ไข (Update)
+    // Fix 3: แก้ไข (Update) - ปรับปรุง Layout Form
     // =====================================
     document.querySelectorAll(".list-update").forEach(btn => {
       btn.onclick = async function () {
@@ -441,11 +442,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const { value: formValues } = await Swal.fire({
           title: '📝 แก้ไขข้อมูลครุภัณฑ์',
           html:
-            `<div style="text-align:left; margin:10px auto;">
-                <label for="swal-code">รหัสครุภัณฑ์:</label>
-                <input id="swal-code" class="swal2-input" value="${code}">
-                <label for="swal-name">ชื่อครุภัณฑ์:</label>
-                <input id="swal-name" class="swal2-input" value="${name}">
+            // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข
+            `<div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
+                <label for="swal-code" style="align-self: center; font-weight: bold;">รหัสครุภัณฑ์:</label>
+                <input id="swal-code" class="swal2-input" value="${code}" style="margin: 0; padding: 10px;">
+                
+                <label for="swal-name" style="align-self: center; font-weight: bold;">ชื่อครุภัณฑ์:</label>
+                <input id="swal-name" class="swal2-input" value="${name}" style="margin: 0; padding: 10px;">
             </div>`,
           focusConfirm: false,
           showCancelButton: true,
@@ -458,10 +461,7 @@ document.addEventListener("DOMContentLoaded", () => {
               Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
               return false;
             }
-            return {
-              code: newCode,
-              name: newName
-            };
+            return { code: newCode, name: newName };
           }
         });
 
@@ -496,7 +496,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // =====================================
-    // ลบ (Delete)
+    // ลบ (Delete) (เหมือนเดิม)
     // =====================================
     document.querySelectorAll(".list-delete").forEach(btn => {
       btn.onclick = async function () {
@@ -530,7 +530,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /***************************************************
-    * Fix 4: USER PAGE (ปรับโครงสร้างใหม่)
+    * USER PAGE
     ***************************************************/
   async function renderUserPage() {
     const data = await fetchJSON(URLS.USER);
@@ -570,29 +570,32 @@ document.addEventListener("DOMContentLoaded", () => {
     html += "</tbody></table>";
     pageContent.innerHTML = html;
 
-    // ปุ่มรีเฟรชใช้ handleRefresh
     document.getElementById("refresh-user").onclick = handleRefresh('user', "กำลังโหลดรายชื่อสมาชิก...");
 
     // =====================================
-    // Fix 4: เพิ่มสมาชิก - ใช้ Popup Form
+    // Fix 3: เพิ่มสมาชิก - ปรับปรุง Layout Form
     // =====================================
     const addUserBtn = document.getElementById("add-user");
     if (addUserBtn) addUserBtn.onclick = async () => {
       const { value: formValues } = await Swal.fire({
         title: '➕ เพิ่มสมาชิกใหม่',
         html:
-          `<div style="text-align:left; margin:10px auto;">
-              <label for="swal-id">ID:</label>
-              <input id="swal-id" class="swal2-input" placeholder="ID" required>
-              <label for="swal-pass">Pass:</label>
-              <input id="swal-pass" class="swal2-input" placeholder="Password" required>
-              <label for="swal-status">Status:</label>
-              <select id="swal-status" class="swal2-select">
+          // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข
+          `<div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
+              <label for="swal-id" style="align-self: center; font-weight: bold;">ID:</label>
+              <input id="swal-id" class="swal2-input" placeholder="ID" style="margin: 0; padding: 10px;">
+              
+              <label for="swal-pass" style="align-self: center; font-weight: bold;">Pass:</label>
+              <input id="swal-pass" class="swal2-input" placeholder="Password" style="margin: 0; padding: 10px;">
+              
+              <label for="swal-status" style="align-self: center; font-weight: bold;">Status:</label>
+              <select id="swal-status" class="swal2-select" style="margin: 0; padding: 10px; width: auto; font-size: inherit;">
                 <option value="admin">admin</option>
                 <option value="employee">employee</option>
               </select>
-              <label for="swal-name">ชื่อ:</label>
-              <input id="swal-name" class="swal2-input" placeholder="ชื่อ" required>
+
+              <label for="swal-name" style="align-self: center; font-weight: bold;">ชื่อ:</label>
+              <input id="swal-name" class="swal2-input" placeholder="ชื่อ" style="margin: 0; padding: 10px;">
           </div>`,
         focusConfirm: false,
         showCancelButton: true,
@@ -640,7 +643,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // =====================================
-    // Fix 4: แก้ไขสมาชิก - ใช้ Popup Form
+    // Fix 3: แก้ไขสมาชิก - ปรับปรุง Layout Form
     // =====================================
     document.querySelectorAll(".up-user").forEach(btn => {
       btn.onclick = async function () {
@@ -655,18 +658,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const { value: formValues } = await Swal.fire({
           title: '📝 แก้ไขสมาชิก',
           html:
-            `<div style="text-align:left; margin:10px auto;">
-                <label for="swal-id">ID:</label>
-                <input id="swal-id" class="swal2-input" value="${id}">
-                <label for="swal-pass">Pass:</label>
-                <input id="swal-pass" class="swal2-input" value="${pass}">
-                <label for="swal-status">Status:</label>
-                <select id="swal-status" class="swal2-select">
+            // Layout Grid สำหรับฟอร์มเพิ่ม/แก้ไข
+            `<div style="display: grid; grid-template-columns: auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
+                <label for="swal-id" style="align-self: center; font-weight: bold;">ID:</label>
+                <input id="swal-id" class="swal2-input" value="${id}" style="margin: 0; padding: 10px;">
+                
+                <label for="swal-pass" style="align-self: center; font-weight: bold;">Pass:</label>
+                <input id="swal-pass" class="swal2-input" value="${pass}" style="margin: 0; padding: 10px;">
+                
+                <label for="swal-status" style="align-self: center; font-weight: bold;">Status:</label>
+                <select id="swal-status" class="swal2-select" style="margin: 0; padding: 10px; width: auto; font-size: inherit;">
                   <option value="admin" ${status === "admin" ? "selected" : ""}>admin</option>
                   <option value="employee" ${status === "employee" ? "selected" : ""}>employee</option>
                 </select>
-                <label for="swal-name">ชื่อ:</label>
-                <input id="swal-name" class="swal2-input" value="${name}">
+
+                <label for="swal-name" style="align-self: center; font-weight: bold;">ชื่อ:</label>
+                <input id="swal-name" class="swal2-input" value="${name}" style="margin: 0; padding: 10px;">
             </div>`,
           focusConfirm: false,
           showCancelButton: true,
@@ -716,7 +723,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // =====================================
-    // Fix 4: ลบสมาชิก
+    // ลบสมาชิก (เหมือนเดิม)
     // =====================================
     document.querySelectorAll(".del-user").forEach(btn => {
       btn.onclick = async function () {
@@ -750,17 +757,19 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /***************************************************
-    * Fix 2: REPORT PAGE (ลบปุ่ม Export และ คอลัมน์ วันที่/เวลา)
+    * REPORT PAGE (Fix 2: กู้คืนปุ่ม Export)
     ***************************************************/
   async function renderReportPage() {
     const data = await fetchJSON(URLS.SHOW);
 
     let html = `
-      <p style="color:red;">❌ ฟังก์ชันสร้างรายงาน (Excel) ถูกนำออกแล้วตามคำสั่ง</p>
+      <div style="margin-bottom:10px">
+        <button id="export-report" class="btn">⬇️ สร้างรายงาน (Excel)</button>
+      </div>
       <table class="dash-table"><thead><tr>
         <th>รหัสครุภัณฑ์</th><th>ชื่อครุภัณฑ์</th><th>ที่เก็บ</th><th>สถานะ</th>
-        <th>รายละเอียดเพิ่มเติม</th>
-      </tr></thead><tbody>`; // Fix 2: ลบ <th> วันที่/เวลา </th>
+        <th>รายละเอียดเพิ่มเติม</th><th>วันที่</th><th>เวลา</th>
+      </tr></thead><tbody>`; // Fix 2: กู้คืน <th> วันที่/เวลา </th>
 
     data.forEach(r => {
       html += `<tr>
@@ -769,17 +778,49 @@ document.addEventListener("DOMContentLoaded", () => {
         <td>${r["ที่เก็บ"] || ""}</td>
         <td>${r["สถานะ"] || ""}</td>
         <td>${r["รายละเอียดเพิ่มเติม"] || ""}</td>
-      </tr>`;
+        <td>${r["วันที่"] || ""}</td> <td>${r["เวลา"] || ""}</td> </tr>`;
     });
 
     html += "</tbody></table>";
     pageContent.innerHTML = html;
 
-    // Fix 2: ลบส่วน Export button logic ออก
+    // Fix 2: กู้คืน Export button logic
+    document.getElementById("export-report").onclick = async function () {
+      const confirmResult = await Swal.fire({
+        title: "ยืนยันการสร้างรายงาน?",
+        text: "คุณต้องการให้ระบบสร้างไฟล์ Excel รายงานหรือไม่?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#17a2b8",
+        cancelButtonColor: "#6c757d",
+        confirmButtonText: "ใช่, สร้างรายงาน",
+        cancelButtonText: "ยกเลิก"
+      });
+      if (!confirmResult.isConfirmed) return;
+
+      try {
+        const body = new FormData();
+        body.append("sheet", "SHOW");
+        body.append("action", "generateReport");
+        const result = await fetchJSON(BASE, "POST", body); // โค้ดนี้จะเรียกฟังก์ชัน generateReport ใน GAS
+
+        if (result && result.status === "success" && result.fileURL) {
+          await Swal.fire({
+            title: "สำเร็จ!",
+            html: `สร้างรายงานเสร็จสิ้น: <a href="${result.fileURL}" target="_blank">ดาวน์โหลดไฟล์</a>`,
+            icon: "success"
+          });
+        } else {
+          await Swal.fire("ผิดพลาด!", "ไม่สามารถสร้างรายงานได้ โปรดตรวจสอบ Backend", "error");
+        }
+      } catch (e) {
+        await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
+      }
+    };
   }
 
   /***************************************************
-    * Fix 5: MANUAL PAGE (คู่มือการใช้งาน)
+    * MANUAL PAGE (เหมือนเดิม)
     ***************************************************/
   function renderManualPage() {
     pageContent.innerHTML = `
@@ -819,7 +860,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <p>แสดงรายการครุภัณฑ์ทั้งหมดในชีท SHOW</p>
       <ul>
         <li><strong>การแสดงผล:</strong> แสดงเฉพาะรายการที่ถูกย้ายจากหน้า **ครุภัณฑ์ที่รอตรวจสอบ** เข้ามาแล้ว</li>
-        <li>**หมายเหตุ:** ฟังก์ชันสร้างรายงาน (Excel) ถูกนำออกไปแล้วตามคำสั่ง</li>
+        <li><strong>สร้างรายงาน (Excel):</strong> ส่งคำขอไปยัง Backend (GAS) เพื่อสร้างไฟล์ Excel รายงาน</li>
       </ul>
     `;
   }
