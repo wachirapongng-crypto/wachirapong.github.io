@@ -65,17 +65,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ฟังก์ชันแปลงวันที่ (สำคัญมาก: แก้ปัญหา DD/MM/YYYY)
     function formatDateTH(v) {
-    if (!v) return "";
+  if (!v) return "";
 
-    const d = new Date(v);
-    if (isNaN(d.getTime())) return "";
+  const [d, m, y] = String(v).split("/");
+  if (!d || !m || !y) return v;
 
-    const day   = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year  = d.getFullYear() + 543;
-
-    return `${day}/${month}/${year}`;
-} // <--- จบฟังก์ชัน formatDateTH
+  return `${d}/${m}/${Number(y) + 543}`;
+}
+ // <--- จบฟังก์ชัน formatDateTH
 
 
     // ฟังก์ชันแปลงเวลา
