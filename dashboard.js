@@ -65,31 +65,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ฟังก์ชันแปลงวันที่ (สำคัญมาก: แก้ปัญหา DD/MM/YYYY)
     function formatDateTH(v) {
-        if (!v) return "";
-        let d;
-        const parts = String(v).split('/');
-        
-        if (parts.length === 3) {
-            // กรณีมาเป็น 01/10/2025 -> แปลงเป็น 2025/10/01 เพื่อให้ JS อ่านออก
-            const isoLikeString = `${parts[2]}/${parts[1]}/${parts[0]}`;
-            d = new Date(isoLikeString);
-        } else {
-            // กรณีมาเป็นรูปแบบอื่น
-            d = new Date(v);
-        }
+    if (!v) return "";
 
-        // ตรวจสอบว่าวันที่ใช้ได้ไหม
-        if (isNaN(d.getTime()) || d.getFullYear() < 2000) {
-            return v; 
-        }
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return "";
 
-        // แปลงเป็น พ.ศ.
-        const day = String(d.getDate()).padStart(2, "0");
-        const month = String(d.getMonth() + 1).padStart(2, "0");
-        const year = d.getFullYear() + 543;
-        
-        return `${day}/${month}/${year}`;
-    } // <--- จบฟังก์ชัน formatDateTH
+    const day   = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year  = d.getFullYear() + 543;
+
+    return `${day}/${month}/${year}`;
+} // <--- จบฟังก์ชัน formatDateTH
 
 
     // ฟังก์ชันแปลงเวลา
