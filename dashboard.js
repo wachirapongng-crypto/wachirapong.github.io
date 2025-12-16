@@ -306,8 +306,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- 5.1 หน้า WAIT ---
     async function renderWaitPage() {
         const data = await fetchJSON(URLS.WAIT);
-        const LOCATIONS = ["501", "502", "503", "401", "401A", "401B", "401C", "402", "403", "404", "405", "ห้องพักครู", "301", "302"];
-        const STATUS = ["ใช้งานได้", "ชำรุด", "เสื่อมสภาพ", "หมดอายุการใช้งาน", "ไม่รองรับการใช้งาน"];
+        const LOCATIONS = ["-","501", "502", "503", "401", "401A", "401B", "401C", "402", "403", "404", "405", "ห้องพักครู", "301", "302"];
+        const STATUS = ["-","ใช้งานได้", "ชำรุด", "เสื่อมสภาพ", "หมดอายุการใช้งาน", "ไม่รองรับการใช้งาน"];
 
         // ฟังก์ชันสร้าง Dropdown Options
         const createOptions = (options, selectedValue) => 
