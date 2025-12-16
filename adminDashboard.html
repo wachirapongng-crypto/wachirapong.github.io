@@ -1,55 +1,84 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<link rel="stylesheet" href="./css/dashborad.css"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        /* ปรับแต่งเพิ่มเติมเล็กน้อยเพื่อให้ดูสบายตา */
+        body { background-color: #f8f9fa; }
+        .sidebar-link { cursor: pointer; }
+        .sidebar-link:hover { background-color: #e9ecef; }
+    </style>
 </head>
 
 <body>
 
-<header>
-  <button class="openbtn" onclick="openNav()">☰</button>
-  <h1>ระบบจัดการครุภัณฑ์ (Admin)</h1>
-  <div class="header-right">
-    <div class="user-info">👤 <span id="username">Admin</span></div>
-    <button id="logout-btn">ออกจากระบบ</button>
-  </div>
-</header>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container-fluid">
+            <button class="btn btn-primary me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
+                <i class="bi bi-list fs-4"></i>
+            </button>
+            
+            <a class="navbar-brand fw-bold" href="#">ระบบจัดการครุภัณฑ์</a>
 
-<!-- ===== Slide Sidebar ===== -->
-<div id="mySidebar" class="sidebar">
-  <a class="closebtn" onclick="closeNav()">×</a>
-  <button onclick="loadPage('wait')">🕓 ครุภัณฑ์ที่รอตรวจสอบ</button>
-  <button onclick="loadPage('report')">📊 ออกรายงานครุภัณฑ์</button>
-  <button onclick="loadPage('list')">📋 รายการครุภัณฑ์ทั้งหมด</button>
-  <button onclick="loadPage('manual')">📘 คู่มือการใช้งาน</button>
-  <button onclick="loadPage('user')">👥 จัดการสมาชิก</button>
-</div>
+            <div class="d-flex align-items-center ms-auto text-white">
+                <div class="me-3">
+                    <i class="bi bi-person-circle"></i> 
+                    <span id="username">Admin</span>
+                </div>
+                <button id="logout-btn" class="btn btn-sm btn-danger">
+                    <i class="bi bi-box-arrow-right"></i> ออกจากระบบ
+                </button>
+            </div>
+        </div>
+    </nav>
 
-<!-- ===== ส่วนแสดงเนื้อหา ===== -->
-<div id="main">
-  <main class="content">
-    <h2 id="page-title">ยินดีต้อนรับ</h2>
-    <div id="page-content">เลือกเมนูจากด้านซ้ายเพื่อเริ่มใช้งาน</div>
-  </main>
-</div>
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu">
+        <div class="offcanvas-header bg-light">
+            <h5 class="offcanvas-title fw-bold text-primary">เมนูหลัก</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <div class="list-group list-group-flush">
+                <button onclick="loadPage('wait')" class="list-group-item list-group-item-action sidebar-link border-0 py-3" data-bs-dismiss="offcanvas">
+                    <i class="bi bi-clock-history me-2 text-warning"></i> ครุภัณฑ์ที่รอตรวจสอบ
+                </button>
+                <button onclick="loadPage('report')" class="list-group-item list-group-item-action sidebar-link border-0 py-3" data-bs-dismiss="offcanvas">
+                    <i class="bi bi-bar-chart-line me-2 text-success"></i> ออกรายงานครุภัณฑ์
+                </button>
+                <button onclick="loadPage('list')" class="list-group-item list-group-item-action sidebar-link border-0 py-3" data-bs-dismiss="offcanvas">
+                    <i class="bi bi-list-check me-2 text-primary"></i> รายการครุภัณฑ์ทั้งหมด
+                </button>
+                <button onclick="loadPage('manual')" class="list-group-item list-group-item-action sidebar-link border-0 py-3" data-bs-dismiss="offcanvas">
+                    <i class="bi bi-book me-2 text-info"></i> คู่มือการใช้งาน
+                </button>
+                <button onclick="loadPage('user')" class="list-group-item list-group-item-action sidebar-link border-0 py-3" data-bs-dismiss="offcanvas">
+                    <i class="bi bi-people me-2 text-secondary"></i> จัดการสมาชิก
+                </button>
+            </div>
+        </div>
+    </div>
 
-<script src="dashboard.js"></script>
+    <div class="container mt-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <main class="content" id="main">
+                    <h2 id="page-title" class="mb-3 border-bottom pb-2">ยินดีต้อนรับ</h2>
+                    <div id="page-content" class="text-muted">
+                        กรุณาเลือกเมนูจากด้านซ้ายเพื่อเริ่มใช้งาน
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
 
-<script>
-function openNav() {
-  document.getElementById("mySidebar").style.width = "260px";
-  document.getElementById("main").style.marginLeft = "260px";
-}
-
-function closeNav() {
-  document.getElementById("mySidebar").style.width = "0";
-  document.getElementById("main").style.marginLeft = "0";
-}
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="dashboard.js"></script>
 
 </body>
 </html>
