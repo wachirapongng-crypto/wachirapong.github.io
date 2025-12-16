@@ -1,8 +1,8 @@
 /***************************************************
- * dashboard.js — Full fixed & cleaned (v3.2 Final Date Fix)
- * - Fix 1: Date format D/M/YYYY (e.g., 1/10/2025) fixed to work with GAS output.
- * - Fix 2: Added scroll capability to the main dash-table container.
- * - Fix 3: UI Layout for List/User Add/Edit forms fixed using Grid/Flex.
+ * dashboard.js — Full fixed & cleaned (v3.2 Refactored)
+ * - แก้ไขเรื่องวันที่ (DD/MM/YYYY) ให้แสดงผลถูกต้อง
+ * - รวมฟังก์ชันสร้างฟอร์ม SweetAlert2 ไว้ที่เดียว (ลดโค้ดซ้ำซ้อน)
+ * - ปรับ UI ให้เป็นระเบียบ
  ***************************************************/
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -10,7 +10,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // =====================================
     const BASE = "https://script.google.com/macros/s/AKfycbzyOwWg00Fp9NgGg6AscrNb3uSNjHAp6d-E9Z3bjG-IalIXgm4wJpc3sFpmkY0iVlNv2w/exec";
 
-    // กำหนด URL สำหรับเข้าถึงข้อมูลแต่ละชีท
     const URLS = {
         DATA: BASE + "?sheet=DATA",
         WAIT: BASE + "?sheet=WAIT",
@@ -19,21 +18,12 @@ document.addEventListener("DOMContentLoaded", () => {
         SHOW: BASE + "?sheet=SHOW"
     };
 
-    // อ้างอิงถึง Element หลักของหน้า
     const pageTitle = document.getElementById("page-title");
     const pageContent = document.getElementById("page-content");
 
     // 2. Core API / Utility Functions
     // =====================================
 
-    /**
-     * @function fetchJSON
-     * @description ส่งคำขอ Fetch ไปยัง GAS URL พร้อมจัดการ Timeout และแปลง response เป็น JSON
-     * @param {string} url - URL ของ GAS Web App
-     * @param {string} [method="GET"] - Method ที่ใช้ ("GET" หรือ "POST")
-     * @param {FormData|null} [body=null] - ข้อมูลที่จะส่งสำหรับ POST
-     * @returns {Promise<Object[]|[]>} - ข้อมูล JSON ที่ได้จากการตอบกลับ หรือ Array เปล่าเมื่อเกิดข้อผิดพลาด
-     */
     async function fetchJSON(url, method = "GET", body = null) {
         const controller = new AbortController();
         const signal = controller.signal;
@@ -41,10 +31,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             const opt = method === "POST" ? { method: "POST", body, signal } : { method: "GET", signal };
-
             const res = await fetch(url, opt);
             clearTimeout(timeout);
-
             const text = await res.text();
             try {
                 return JSON.parse(text);
@@ -54,20 +42,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } catch (err) {
             clearTimeout(timeout);
-            if (err.name === 'AbortError') {
-                console.error("fetchJSON error: Request timed out after 15 seconds.");
-            } else {
-                console.error("fetchJSON error:", err);
-            }
+            console.error("fetchJSON error:", err);
             return [];
         }
     }
 
-    /**
-     * @function showLoadingMessage
-     * @description แสดงข้อความโหลดและ Spinner ในพื้นที่ pageContent
-     * @param {string} [message="กำลังโหลดข้อมูลอยู่..."] - ข้อความที่ต้องการแสดง
-     */
     function showLoadingMessage(message = "กำลังโหลดข้อมูลอยู่...") {
         pageContent.innerHTML = `<div style="text-align:center; padding: 50px;">
                                     <h3>${message}</h3>
@@ -75,46 +54,29 @@ document.addEventListener("DOMContentLoaded", () => {
                                 </div>`;
     }
 
-    /**
-     * @function formatDateTH
-     * @description แปลงรูปแบบวันที่จาก GAS (DD/MM/YYYY หรือ ISO) เป็น DD/MM/YYYY (พ.ศ.)
-     * @param {string|Date} v - ค่าวันที่
-     * @returns {string} - วันที่ในรูปแบบ DD/MM/YYYY (พ.ศ.) หรือค่าเดิมเมื่อผิดพลาด
-     */
+    // แปลงวันที่จาก GAS (DD/MM/YYYY) เป็น พ.ศ.
     function formatDateTH(v) {
         if (!v) return "";
         let d;
-        
-        // 1. ลองแยก DD/MM/YYYY
         const parts = String(v).split('/');
         if (parts.length === 3) {
-            // แปลงเป็น YYYY/M/D เพื่อให้ new Date() อ่านง่ายขึ้น
-            // ต้องใช้ parts[2] (ปี) เป็นตัวแรก
-            const isoLikeString = `${parts[2]}/${parts[1]}/${parts[0]}`; 
+            // แปลงเป็น YYYY/M/D เพื่อให้ Date object อ่านค่าได้ถูกต้อง
+            const isoLikeString = `${parts[2]}/${parts[1]}/${parts[0]}`;
             d = new Date(isoLikeString);
         } else {
-            // 2. ถ้าไม่ใช่รูปแบบที่คาดหวัง ลองสร้าง Date โดยตรง (สำหรับ ISO 8601)
             d = new Date(v);
         }
 
-        // 3. ตรวจสอบความถูกต้อง (ต้องมีค่าและปีต้องสมเหตุสมผล)
         if (isNaN(d.getTime()) || d.getFullYear() < 2000) {
-            return v; // คืนค่าเดิม
+            return v;
         }
 
-        // แปลงเป็น พ.ศ. และรูปแบบ วัน/เดือน/ปี
         const day = String(d.getDate()).padStart(2, "0");
         const month = String(d.getMonth() + 1).padStart(2, "0");
         const year = d.getFullYear() + 543;
         return `${day}/${month}/${year}`;
     }
 
-    /**
-     * @function formatTime
-     * @description แปลงค่าเวลาเป็นรูปแบบ HH:MM น.
-     * @param {string|Date} v - ค่าเวลา
-     * @returns {string} - เวลาในรูปแบบ HH:MM น.
-     */
     function formatTime(v) {
         if (!v) return "";
         const d = new Date(v);
@@ -124,29 +86,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return `${hh}:${mm} น.`;
     }
 
-    /**
-     * @function computeRowFromData
-     * @description คำนวณเลขที่แถวสำหรับ GAS (ใช้สำหรับ Update/Delete)
-     * @param {Object} r - Object ข้อมูลแถว
-     * @param {number} i - Index ของแถว (เริ่มต้นจาก 0)
-     * @returns {number} - เลขที่แถวใน Google Sheet (เริ่มต้นที่ 2)
-     */
     function computeRowFromData(r, i) {
-        // GAS จะส่ง property ชื่อ _row, row หรือ __row มา
-        if (r && (r._row || r.row || r.__row)) {
-             return (r._row || r.row || r.__row);
-        }
-        // ถ้าไม่มีค่า row มาให้ (เช่น ในบางกรณีของ GET) จะใช้ index + 2 (Header = 1, Data เริ่มที่ 2)
-        return i + 2; 
+         return r && (r._row || r.row || r.__row) ? (r._row || r.row || r.__row) : (i + 2);
     }
 
-    /**
-     * @function showSuccessAndRefresh
-     * @description แสดง SweetAlert2 สำหรับแจ้งเตือนความสำเร็จและโหลดหน้าใหม่
-     * @param {string} message - ข้อความแจ้งเตือนความสำเร็จ
-     * @param {Function} refreshFunc - ฟังก์ชันสำหรับโหลดหน้าใหม่
-     * @param {string} loadingMessage - ข้อความแสดงขณะโหลดหน้าใหม่
-     */
     async function showSuccessAndRefresh(message, refreshFunc, loadingMessage) {
         await Swal.fire({
             title: "สำเร็จ!",
@@ -159,13 +102,6 @@ document.addEventListener("DOMContentLoaded", () => {
         await refreshFunc();
     }
 
-    /**
-     * @function handleRefresh
-     * @description สร้าง Handler สำหรับปุ่ม Refresh ในแต่ละหน้า
-     * @param {string} pageName - ชื่อหน้า (wait, list, user, report)
-     * @param {string} loadingMessage - ข้อความแสดงขณะโหลด
-     * @returns {Function} - ฟังก์ชันที่ใช้เป็น onclick handler
-     */
     function handleRefresh(pageName, loadingMessage) {
         return async () => {
             showLoadingMessage(loadingMessage);
@@ -179,11 +115,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // 3. Router
     // =====================================
 
-    /**
-     * @function loadPageInternal
-     * @description จัดการการเปลี่ยนหน้าตามชื่อหน้าที่กำหนด
-     * @param {string} page - ชื่อหน้า (wait, list, user, report, manual)
-     */
     async function loadPageInternal(page) {
         pageContent.innerHTML = "";
         if (page === "wait") {
@@ -216,23 +147,87 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // กำหนดให้ loadPage เป็น Global function เพื่อให้เรียกใช้จากเมนู HTML ได้
     window.loadPage = loadPageInternal;
-
-    // โหลดหน้าเริ่มต้น
     window.loadPage("wait");
 
-    // 4. Page Rendering Functions
+    // 4. Shared SweetAlert Form Functions (Refactored)
+    // ================================================
+
+    // ฟอร์มสำหรับเพิ่ม/แก้ไข ครุภัณฑ์
+    async function showAssetForm(title, code = '', name = '', confirmText = 'บันทึก') {
+        return Swal.fire({
+            title: title,
+            html: `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; padding: 10px 20px; width: 100%;">
+                    <div style="grid-column: 1 / 2;">
+                        <label for="swal-code" style="font-weight: bold; display: block; margin-bottom: 5px;">รหัสครุภัณฑ์:</label>
+                        <input id="swal-code" class="swal2-input" value="${code}" placeholder="ระบุรหัสครุภัณฑ์" style="margin: 0; padding: 10px; width: 100%;">
+                    </div>
+                    <div style="grid-column: 2 / 3;">
+                        <label for="swal-name" style="font-weight: bold; display: block; margin-bottom: 5px;">ชื่อครุภัณฑ์:</label>
+                        <input id="swal-name" class="swal2-input" value="${name}" placeholder="ระบุชื่อครุภัณฑ์" style="margin: 0; padding: 10px; width: 100%;">
+                    </div>
+                </div>`,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: confirmText,
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => {
+                const newCode = document.getElementById('swal-code').value.trim();
+                const newName = document.getElementById('swal-name').value.trim();
+                if (!newCode || !newName) {
+                    Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
+                    return false;
+                }
+                return { code: newCode, name: newName };
+            }
+        });
+    }
+
+    // ฟอร์มสำหรับเพิ่ม/แก้ไข สมาชิก
+    async function showUserForm(title, id = '', pass = '', status = 'employee', name = '', confirmText = 'บันทึก') {
+        return Swal.fire({
+            title: title,
+            html: `
+                <div style="display: grid; grid-template-columns: auto 1fr auto 1fr; gap: 10px 20px; text-align: left; padding: 10px 20px; width: 100%;">
+                    <label for="swal-id" style="align-self: center; font-weight: bold;">ID:</label>
+                    <input id="swal-id" class="swal2-input" value="${id}" placeholder="ID" style="margin: 0; padding: 10px;">
+                    
+                    <label for="swal-pass" style="align-self: center; font-weight: bold;">Pass:</label>
+                    <input id="swal-pass" class="swal2-input" value="${pass}" placeholder="Password" style="margin: 0; padding: 10px;">
+                    
+                    <label for="swal-status" style="align-self: center; font-weight: bold;">Status:</label>
+                    <select id="swal-status" class="swal2-select" style="margin: 0; padding: 10px; width: 100%; font-size: inherit;">
+                        <option value="admin" ${status === "admin" ? "selected" : ""}>admin</option>
+                        <option value="employee" ${status === "employee" ? "selected" : ""}>employee</option>
+                    </select>
+
+                    <label for="swal-name" style="align-self: center; font-weight: bold;">ชื่อ:</label>
+                    <input id="swal-name" class="swal2-input" value="${name}" placeholder="ชื่อ" style="margin: 0; padding: 10px;">
+                </div>`,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: confirmText,
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => {
+                const newId = document.getElementById('swal-id').value.trim();
+                const newPass = document.getElementById('swal-pass').value.trim();
+                const newStatus = document.getElementById('swal-status').value.trim();
+                const newName = document.getElementById('swal-name').value.trim();
+                if (!newId || !newPass || !newStatus || !newName) {
+                    Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
+                    return false;
+                }
+                return { id: newId, pass: newPass, status: newStatus, name: newName };
+            }
+        });
+    }
+
+    // 5. Page Rendering Functions
     // =====================================
 
-    /**
-     * @function renderWaitPage
-     * @description ดึงข้อมูลจากชีท WAIT และแสดงในรูปแบบตาราง พร้อมฟังก์ชัน Move/Delete
-     */
     async function renderWaitPage() {
         const data = await fetchJSON(URLS.WAIT);
-
-        // ค่าคงที่สำหรับ Dropdown
         const LOCATIONS = ["501", "502", "503", "401", "401A", "401B", "401C", "402", "403", "404", "405", "ห้องพักครู", "301", "302"];
         const STATUS = ["ใช้งานได้", "ชำรุด", "เสื่อมสภาพ", "หมดอายุการใช้งาน", "ไม่รองรับการใช้งาน"];
 
@@ -240,7 +235,6 @@ document.addEventListener("DOMContentLoaded", () => {
             <div style="margin-bottom:10px">
                 <button id="refresh-wait" class="btn">🔄 รีเฟรช</button>
             </div>
-            
             <div style="overflow-x: auto;">
                 <table class="dash-table">
                     <thead>
@@ -250,8 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <th>ย้ายเข้ารายงาน</th><th>ลบ</th>
                         </tr>
                     </thead>
-                    <tbody>
-        `;
+                    <tbody>`;
 
         data.forEach((r, i) => {
             const row = computeRowFromData(r, i);
@@ -259,48 +252,41 @@ document.addEventListener("DOMContentLoaded", () => {
                 <tr data-row="${row}">
                     <td>${r["รหัส"] || ""}</td>
                     <td>${r["ชื่อ"] || ""}</td>
-
                     <td>
                         <select class="wait-loc">
                             ${LOCATIONS.map(v => `<option value="${v}" ${v === r["ที่อยู่"] ? "selected" : ""}>${v}</option>`).join("")}
                         </select>
                     </td>
-
                     <td>
                         <select class="wait-status">
                             ${STATUS.map(v => `<option value="${v}" ${v === r["สถานะ"] ? "selected" : ""}>${v}</option>`).join("")}
                         </select>
                     </td>
-
                     <td><input class="wait-note" value="${r["หมายเหตุ"] || ""}" placeholder="รายละเอียดเพิ่มเติม"></td>
-
                     <td>${formatDateTH(r["วันที่"])}</td>
                     <td>${formatTime(r["เวลา"])}</td>
-
                     <td><button class="btn move-log">✔</button></td>
                     <td><button class="btn del-wait">🗑</button></td>
-                </tr>
-            `;
+                </tr>`;
         });
-
         html += "</tbody></table></div>";
         pageContent.innerHTML = html;
 
-        // Attach Event Listeners
         document.getElementById("refresh-wait").onclick = handleRefresh('wait', "กำลังโหลดข้อมูลครุภัณฑ์ที่รอตรวจสอบ...");
 
-        // **Move To LOG** - ย้ายรายการไปชีท LOG (REPORT) และลบออกจาก WAIT
+        // Move to Log
         document.querySelectorAll(".move-log").forEach(btn => {
             btn.onclick = async function () {
-                // ... (Logic for confirmation and API calls for addLog and delete)
-                const confirmResult = await Swal.fire({ /* ... confirmation options ... */ });
+                const confirmResult = await Swal.fire({
+                    title: "คุณแน่ใจหรือไม่?", text: "ยืนยันการเพิ่มรายการเข้ารายงาน?", icon: "warning",
+                    showCancelButton: true, confirmButtonText: "ใช่, ยืนยัน!", cancelButtonText: "ยกเลิก"
+                });
                 if (!confirmResult.isConfirmed) return;
 
                 try {
                     const tr = this.closest("tr");
                     const row = tr.dataset.row;
-
-                    // 1. เพิ่มรายการไป LOG
+                    
                     const body = new FormData();
                     body.append("sheet", "LOG");
                     body.append("action", "addLog");
@@ -309,11 +295,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     body.append("ที่อยู่", tr.querySelector(".wait-loc").value);
                     body.append("สถานะ", tr.querySelector(".wait-status").value);
                     body.append("หมายเหตุ", tr.querySelector(".wait-note").value);
-                    body.append("วันที่", tr.children[5].innerText.trim()); 
+                    body.append("วันที่", tr.children[5].innerText.trim());
                     body.append("เวลา", tr.children[6].innerText.trim());
                     const logResult = await fetchJSON(BASE, "POST", body);
 
-                    // 2. ลบออกจาก WAIT
                     const del = new FormData();
                     del.append("sheet", "WAIT");
                     del.append("action", "delete");
@@ -321,21 +306,21 @@ document.addEventListener("DOMContentLoaded", () => {
                     const deleteResult = await fetchJSON(BASE, "POST", del);
 
                     if (logResult && deleteResult) {
-                        await showSuccessAndRefresh("เพิ่มรายการเข้ารายงานสำเร็จแล้ว", renderWaitPage, "กำลังโหลดข้อมูลครุภัณฑ์ที่รอตรวจสอบ...");
-                    } else {
-                        await Swal.fire("ผิดพลาด!", "การดำเนินการไม่สมบูรณ์ หรือ Server ตอบกลับไม่สำเร็จ", "error");
+                        await showSuccessAndRefresh("เพิ่มรายการสำเร็จ", renderWaitPage, "กำลังโหลดข้อมูล...");
                     }
                 } catch (e) {
-                    await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
+                    await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้อง", "error");
                 }
             };
         });
 
-        // **Delete Wait Item** - ลบรายการจากชีท WAIT
+        // Delete Wait
         document.querySelectorAll(".del-wait").forEach(btn => {
             btn.onclick = async function () {
-                // ... (Logic for confirmation and API call for delete)
-                const confirmResult = await Swal.fire({ /* ... confirmation options ... */ });
+                const confirmResult = await Swal.fire({
+                    title: "คุณแน่ใจหรือไม่?", text: "ต้องการลบรายการนี้?", icon: "warning",
+                    showCancelButton: true, confirmButtonText: "ลบเลย", cancelButtonText: "ยกเลิก"
+                });
                 if (!confirmResult.isConfirmed) return;
 
                 try {
@@ -345,22 +330,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     body.append("action", "delete");
                     body.append("row", row);
                     await fetchJSON(BASE, "POST", body);
-
-                    await showSuccessAndRefresh("ลบรายการสำเร็จแล้ว", renderWaitPage, "กำลังโหลดข้อมูลครุภัณฑ์ที่รอตรวจสอบ...");
+                    await showSuccessAndRefresh("ลบสำเร็จ", renderWaitPage, "กำลังโหลดข้อมูล...");
                 } catch (e) {
-                    await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
+                    await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้อง", "error");
                 }
             };
         });
     }
 
-    /**
-     * @function renderListPage
-     * @description ดึงข้อมูลครุภัณฑ์ทั้งหมดจากชีท DATA และแสดงในรูปแบบตาราง พร้อมฟังก์ชัน Add/Update/Delete
-     */
     async function renderListPage() {
         const data = await fetchJSON(URLS.DATA);
-        // กรองข้อมูลที่ไม่มีรหัสครุภัณฑ์
         const filteredData = data.filter(r => r["รหัสครุภัณฑ์"] && r["รหัสครุภัณฑ์"].toString().trim() !== "");
 
         let html = `
@@ -370,7 +349,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 <button id="refresh-list" class="btn">🔄 รีเฟรช</button>
             </div>
             <hr>
-            
             <div style="overflow-x: auto;">
             <table class="dash-table">
                     <thead>
@@ -379,15 +357,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             <th>Barcode</th><th>QRCode</th><th>แก้ไข</th><th>ลบ</th>
                         </tr>
                     </thead>
-                    <tbody>
-        `;
+                    <tbody>`;
 
         filteredData.forEach((r, i) => {
             const row = computeRowFromData(r, i);
             const codeRaw = r["รหัสครุภัณฑ์"] || "";
             const code = encodeURIComponent(codeRaw);
             const name = r["ชื่อครุภัณฑ์"] || "";
-
             const barcodeURL = `https://barcode.tec-it.com/barcode.ashx?data=${code}&code=Code128&translate-esc=true`;
             const qrURL = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${code}`;
 
@@ -401,23 +377,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td><button class="btn list-delete">🗑</button></td>
             </tr>`;
         });
-
         html += "</tbody></table></div>";
         pageContent.innerHTML = html;
 
-        // Attach Event Listeners
-        document.getElementById("refresh-list").onclick = handleRefresh('list', "กำลังโหลดรายการครุภัณฑ์ทั้งหมด...");
+        document.getElementById("refresh-list").onclick = handleRefresh('list', "กำลังโหลดรายการ...");
 
-        // **Add New Item** - เพิ่มรายการครุภัณฑ์ใหม่
+        // Add Item
         const addBtn = document.getElementById("add-item");
         if (addBtn) addBtn.onclick = async () => {
-             // ... (Logic for SweetAlert2 form, validation, confirmation, and API call for add)
-             const { value: formValues } = await Swal.fire({ /* ... form options ... */ });
+             const { value: formValues } = await showAssetForm('➕ เพิ่มรายการครุภัณฑ์ใหม่', '', '', 'เพิ่มรายการ');
              if (!formValues) return;
-
-             const confirmResult = await Swal.fire({ /* ... confirmation options ... */ });
-             if (!confirmResult.isConfirmed) return;
-
+             
              try {
                 const body = new FormData();
                 body.append("sheet", "DATA");
@@ -425,27 +395,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 body.append("code", formValues.code);
                 body.append("name", formValues.name);
                 await fetchJSON(BASE, "POST", body);
-
-                await showSuccessAndRefresh("เพิ่มรายการสำเร็จแล้ว", renderListPage, "กำลังโหลดรายการครุภัณฑ์ทั้งหมด...");
+                await showSuccessAndRefresh("เพิ่มรายการสำเร็จ", renderListPage, "กำลังโหลดรายการ...");
             } catch (e) {
-                await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
+                await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้อง", "error");
             }
         };
 
-        // **Update Item** - แก้ไขข้อมูลครุภัณฑ์
+        // Update Item
         document.querySelectorAll(".list-update").forEach(btn => {
             btn.onclick = async function () {
-                // ... (Logic for retrieving current data, SweetAlert2 form, validation, confirmation, and API call for update)
                 const tr = this.closest("tr");
                 const row = tr.dataset.row;
                 const code = tr.querySelector(".list-code").innerText.trim();
                 const name = tr.querySelector(".list-name").innerText.trim();
-
-                const { value: formValues } = await Swal.fire({ /* ... form options ... */ });
+                
+                const { value: formValues } = await showAssetForm('📝 แก้ไขข้อมูลครุภัณฑ์', code, name, 'บันทึกการแก้ไข');
                 if (!formValues) return;
-
-                const confirmResult = await Swal.fire({ /* ... confirmation options ... */ });
-                if (!confirmResult.isConfirmed) return;
 
                 try {
                     const body = new FormData();
@@ -455,45 +420,39 @@ document.addEventListener("DOMContentLoaded", () => {
                     body.append("code", formValues.code);
                     body.append("name", formValues.name);
                     await fetchJSON(BASE, "POST", body);
-
-                    await showSuccessAndRefresh("แก้ไขรายการสำเร็จแล้ว", renderListPage, "กำลังโหลดรายการครุภัณฑ์ทั้งหมด...");
+                    await showSuccessAndRefresh("แก้ไขสำเร็จ", renderListPage, "กำลังโหลดรายการ...");
                 } catch (e) {
-                    await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
+                    await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้อง", "error");
                 }
             };
         });
 
-        // **Delete Item** - ลบรายการครุภัณฑ์
+        // Delete Item
         document.querySelectorAll(".list-delete").forEach(btn => {
             btn.onclick = async function () {
-                // ... (Logic for confirmation and API call for delete)
-                const row = this.closest("tr").dataset.row;
-
-                const confirmResult = await Swal.fire({ /* ... confirmation options ... */ });
+                const confirmResult = await Swal.fire({
+                    title: "ยืนยันการลบ?", text: "ลบรายการนี้ถาวร?", icon: "warning",
+                    showCancelButton: true, confirmButtonText: "ลบ", cancelButtonText: "ยกเลิก"
+                });
                 if (!confirmResult.isConfirmed) return;
-
+                
                 try {
+                    const row = this.closest("tr").dataset.row;
                     const body = new FormData();
                     body.append("sheet", "DATA");
                     body.append("action", "delete");
                     body.append("row", row);
                     await fetchJSON(BASE, "POST", body);
-
-                    await showSuccessAndRefresh("ลบรายการสำเร็จแล้ว", renderListPage, "กำลังโหลดรายการครุภัณฑ์ทั้งหมด...");
+                    await showSuccessAndRefresh("ลบสำเร็จ", renderListPage, "กำลังโหลดรายการ...");
                 } catch (e) {
-                    await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
+                    await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้อง", "error");
                 }
             };
         });
     }
 
-    /**
-     * @function renderUserPage
-     * @description ดึงข้อมูลสมาชิกจากชีท LOGIN และแสดงในรูปแบบตาราง พร้อมฟังก์ชัน Add/Update/Delete User
-     */
     async function renderUserPage() {
         const data = await fetchJSON(URLS.USER);
-
         let html = `
             <h3>จัดการสมาชิก</h3>
             <div style="margin-bottom:10px">
@@ -503,13 +462,9 @@ document.addEventListener("DOMContentLoaded", () => {
             <div style="overflow-x: auto;">
             <table class="dash-table">
                 <thead>
-                    <tr>
-                        <th>ID</th><th>Pass</th><th>Status</th><th>Name</th>
-                        <th>แก้ไข</th><th>ลบ</th>
-                    </tr>
+                    <tr><th>ID</th><th>Pass</th><th>Status</th><th>Name</th><th>แก้ไข</th><th>ลบ</th></tr>
                 </thead>
-                <tbody>
-        `;
+                <tbody>`;
 
         data.forEach((u, i) => {
             const row = computeRowFromData(u, i);
@@ -522,23 +477,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td><button class="btn del-user">🗑</button></td>
             </tr>`;
         });
-
         html += "</tbody></table></div>";
         pageContent.innerHTML = html;
 
-        // Attach Event Listeners
-        document.getElementById("refresh-user").onclick = handleRefresh('user', "กำลังโหลดรายชื่อสมาชิก...");
+        document.getElementById("refresh-user").onclick = handleRefresh('user', "กำลังโหลดสมาชิก...");
 
-        // **Add User** - เพิ่มสมาชิกใหม่
+        // Add User
         const addUserBtn = document.getElementById("add-user");
         if (addUserBtn) addUserBtn.onclick = async () => {
-             // ... (Logic for SweetAlert2 form, validation, confirmation, and API call for addUser)
-             const { value: formValues } = await Swal.fire({ /* ... form options ... */ });
+             const { value: formValues } = await showUserForm('➕ เพิ่มสมาชิกใหม่', '', '', 'employee', '', 'เพิ่มสมาชิก');
              if (!formValues) return;
-
-             const confirmResult = await Swal.fire({ /* ... confirmation options ... */ });
-             if (!confirmResult.isConfirmed) return;
-
              try {
                 const body = new FormData();
                 body.append("sheet", "LOGIN");
@@ -548,30 +496,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 body.append("status", formValues.status);
                 body.append("name", formValues.name);
                 await fetchJSON(BASE, "POST", body);
-
-                await showSuccessAndRefresh("เพิ่มสมาชิกสำเร็จแล้ว", renderUserPage, "กำลังโหลดรายชื่อสมาชิก...");
-            } catch (e) {
-                await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
-            }
+                await showSuccessAndRefresh("เพิ่มสมาชิกสำเร็จ", renderUserPage, "กำลังโหลดสมาชิก...");
+            } catch (e) { await Swal.fire("ผิดพลาด!", "Connection error", "error"); }
         };
 
-        // **Update User** - แก้ไขข้อมูลสมาชิก
+        // Update User
         document.querySelectorAll(".up-user").forEach(btn => {
             btn.onclick = async function () {
-                // ... (Logic for retrieving current data, SweetAlert2 form, validation, confirmation, and API call for updateUser)
                 const tr = this.closest("tr");
                 const row = tr.dataset.row;
                 const id = tr.querySelector(".user-id").innerText.trim();
                 const pass = tr.querySelector(".user-pass").innerText.trim();
                 const status = tr.querySelector(".user-status").innerText.trim();
                 const name = tr.querySelector(".user-name").innerText.trim();
-
-                const { value: formValues } = await Swal.fire({ /* ... form options ... */ });
+                
+                const { value: formValues } = await showUserForm('📝 แก้ไขสมาชิก', id, pass, status, name, 'บันทึก');
                 if (!formValues) return;
-
-                const confirmResult = await Swal.fire({ /* ... confirmation options ... */ });
-                if (!confirmResult.isConfirmed) return;
-
                 try {
                     const body = new FormData();
                     body.append("sheet", "LOGIN");
@@ -582,45 +522,34 @@ document.addEventListener("DOMContentLoaded", () => {
                     body.append("status", formValues.status);
                     body.append("name", formValues.name);
                     await fetchJSON(BASE, "POST", body);
-
-                    await showSuccessAndRefresh("แก้ไขสมาชิกสำเร็จแล้ว", renderUserPage, "กำลังโหลดรายชื่อสมาชิก...");
-                } catch (e) {
-                    await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
-                }
+                    await showSuccessAndRefresh("แก้ไขสำเร็จ", renderUserPage, "กำลังโหลดสมาชิก...");
+                } catch (e) { await Swal.fire("ผิดพลาด!", "Connection error", "error"); }
             };
         });
 
-        // **Delete User** - ลบสมาชิก
+        // Delete User
         document.querySelectorAll(".del-user").forEach(btn => {
             btn.onclick = async function () {
-                // ... (Logic for confirmation and API call for deleteUser)
-                const row = this.closest("tr").dataset.row;
-
-                const confirmResult = await Swal.fire({ /* ... confirmation options ... */ });
+                const confirmResult = await Swal.fire({
+                    title: "ยืนยันการลบ?", text: "ลบสมาชิกนี้ถาวร?", icon: "warning",
+                    showCancelButton: true, confirmButtonText: "ลบ", cancelButtonText: "ยกเลิก"
+                });
                 if (!confirmResult.isConfirmed) return;
-
                 try {
+                    const row = this.closest("tr").dataset.row;
                     const body = new FormData();
                     body.append("sheet", "LOGIN");
                     body.append("action", "deleteUser");
                     body.append("row", row);
                     await fetchJSON(BASE, "POST", body);
-
-                    await showSuccessAndRefresh("ลบสมาชิกสำเร็จแล้ว", renderUserPage, "กำลังโหลดรายชื่อสมาชิก...");
-                } catch (e) {
-                    await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
-                }
+                    await showSuccessAndRefresh("ลบสำเร็จ", renderUserPage, "กำลังโหลดสมาชิก...");
+                } catch (e) { await Swal.fire("ผิดพลาด!", "Connection error", "error"); }
             };
         });
     }
 
-    /**
-     * @function renderReportPage
-     * @description ดึงข้อมูลรายงานจากชีท SHOW และแสดงในรูปแบบตาราง พร้อมฟังก์ชันสร้างรายงาน Excel
-     */
     async function renderReportPage() {
         const data = await fetchJSON(URLS.SHOW);
-
         let html = `
             <div style="margin-bottom:10px">
                 <button id="export-report" class="btn">⬇️ สร้างรายงาน (Excel)</button>
@@ -640,14 +569,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td>${r["รายละเอียดเพิ่มเติม"] || ""}</td>
                 <td>${r["วันที่"] || ""}</td> <td>${r["เวลา"] || ""}</td> </tr>`;
         });
-
         html += "</tbody></table></div>";
         pageContent.innerHTML = html;
 
-        // **Export Report** - ส่งคำขอไปยัง GAS เพื่อสร้างไฟล์ Excel
         document.getElementById("export-report").onclick = async function () {
-            // ... (Logic for confirmation and API call for generateReport)
-            const confirmResult = await Swal.fire({ /* ... confirmation options ... */ });
+            const confirmResult = await Swal.fire({
+                title: "สร้างรายงาน?", text: "ระบบจะสร้างไฟล์ Excel", icon: "question",
+                showCancelButton: true, confirmButtonText: "สร้างเลย"
+            });
             if (!confirmResult.isConfirmed) return;
 
             try {
@@ -659,65 +588,27 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (result && result.status === "success" && result.fileURL) {
                     await Swal.fire({
                         title: "สำเร็จ!",
-                        html: `สร้างรายงานเสร็จสิ้น: <a href="${result.fileURL}" target="_blank">ดาวน์โหลดไฟล์</a>`,
+                        html: `ดาวน์โหลดไฟล์: <a href="${result.fileURL}" target="_blank">คลิกที่นี่</a>`,
                         icon: "success"
                     });
                 } else {
-                    await Swal.fire("ผิดพลาด!", "ไม่สามารถสร้างรายงานได้ โปรดตรวจสอบ Backend", "error");
+                    await Swal.fire("ผิดพลาด!", "ไม่สามารถสร้างรายงานได้", "error");
                 }
-            } catch (e) {
-                await Swal.fire("ผิดพลาด!", "การเชื่อมต่อขัดข้องหรือใช้เวลานานเกินไป", "error");
-            }
+            } catch (e) { await Swal.fire("ผิดพลาด!", "Connection error", "error"); }
         };
     }
 
-    /**
-     * @function renderManualPage
-     * @description แสดงคู่มือการใช้งาน
-     */
     function renderManualPage() {
         pageContent.innerHTML = `
-            <h2>📘 คู่มือการใช้งาน</h2>
-            
-            <hr>
-
+            <h2>📘 คู่มือการใช้งาน</h2><hr>
             <h3>1. ครุภัณฑ์ที่รอตรวจสอบ (WAIT)</h3>
-            <p>รายการครุภัณฑ์ที่ถูกแจ้งเข้ามาเพื่อรอการตรวจสอบและยืนยันสถานะ</p>
-            <ul>
-                <li><strong>แก้ไข:</strong> คุณสามารถแก้ไข **ที่อยู่**, **สถานะ**, และ **หมายเหตุ** ได้โดยตรงในตาราง</li>
-                <li><strong>ย้ายเข้ารายงาน (✔):</strong> ยืนยันข้อมูลและย้ายรายการนี้ไปบันทึกใน **รายงาน LOG / SHOW** และลบออกจากรายการรอตรวจสอบ</li>
-                <li><strong>ลบ (🗑):</strong> ลบรายการนี้ออกจากรายการรอตรวจสอบอย่างถาวร</li>
-                <li><strong>รีเฟรช (🔄):</strong> โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์</li>
-            </ul>
-
+            <p>รายการที่รอการยืนยันสถานะ สามารถแก้ไขข้อมูลและกดยืนยัน (✔) เพื่อย้ายเข้ารายงาน</p>
             <h3>2. รายการครุภัณฑ์ทั้งหมด (LIST)</h3>
-            <p>รายการครุภัณฑ์ทั้งหมดที่มีอยู่ในระบบ (ชีท DATA)</p>
-            <ul>
-                <li><strong>เพิ่มรายการใหม่:</strong> กดปุ่ม **➕ เพิ่มรายการใหม่** จะมีหน้าต่างขึ้นมาให้กรอก **รหัสครุภัณฑ์** และ **ชื่อครุภัณฑ์**</li>
-                <li><strong>แก้ไข (📝):</strong> กดปุ่มแก้ไข จะมีหน้าต่างขึ้นมาให้แก้ไข **รหัสครุภัณฑ์** และ **ชื่อครุภัณฑ์**</li>
-                <li><strong>ลบ (🗑):</strong> ลบรายการครุภัณฑ์นั้นอย่างถาวร</li>
-                <li>**Barcode/QRCode:** ภาพ Barcode และ QR Code ถูกสร้างขึ้นจาก **รหัสครุภัณฑ์** ที่อยู่ในตาราง 
-
-[Image of a barcode and a QR code]
-</li>
-                <li><strong>รีเฟรช (🔄):</strong> โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์</li>
-            </ul>
-
+            <p>จัดการข้อมูลหลัก เพิ่ม/ลบ/แก้ไข รายการครุภัณฑ์</p>
             <h3>3. จัดการสมาชิก (USER)</h3>
-            <p>จัดการบัญชีผู้ใช้งานระบบ</p>
-            <ul>
-                <li><strong>เพิ่มสมาชิกใหม่:</strong> กดปุ่ม **➕ เพิ่มสมาชิกใหม่** จะมีหน้าต่างขึ้นมาให้กรอก **ID**, **Pass**, **Status** (admin/employee) และ **ชื่อ**</li>
-                <li><strong>แก้ไข (📝):</strong> กดปุ่มแก้ไข จะมีหน้าต่างขึ้นมาให้แก้ไขข้อมูลสมาชิกทั้งหมด</li>
-                <li><strong>ลบ (🗑):</strong> ลบสมาชิกนั้นออกจากระบบอย่างถาวร</li>
-                <li><strong>รีเฟรช (🔄):</strong> โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์</li>
-            </ul>
-
-            <h3>4. รายงาน LOG / SHOW (REPORT)</h3>
-            <p>แสดงรายการครุภัณฑ์ทั้งหมดในชีท SHOW</p>
-            <ul>
-                <li><strong>การแสดงผล:</strong> แสดงเฉพาะรายการที่ถูกย้ายจากหน้า **ครุภัณฑ์ที่รอตรวจสอบ** เข้ามาแล้ว</li>
-                <li><strong>สร้างรายงาน (Excel):</strong> ส่งคำขอไปยัง Backend (GAS) เพื่อสร้างไฟล์ Excel รายงาน</li>
-            </ul>
+            <p>เพิ่มและจัดการสิทธิ์ผู้เข้าใช้งาน (Admin/Employee)</p>
+            <h3>4. รายงาน (REPORT)</h3>
+            <p>ดูรายการที่ตรวจสอบแล้วและ Export เป็น Excel</p>
         `;
     }
 });
