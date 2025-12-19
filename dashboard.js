@@ -631,95 +631,100 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-  // --- 5.4 หน้า REPORT (ฉบับมีระบบ Preview) ---
-async function renderReportPage() {
-    const data = await fetchJSON(URLS.SHOW); 
+  // --- 5.4 หน้า REPORT (ฉบับปรับปรุงใหม่ให้เชื่อมต่อกับ GAS) ---
+    async function renderReportPage() {
+        showLoadingMessage("กำลังดึงข้อมูลจากชีท SHOW...");
+        const data = await fetchJSON(URLS.SHOW); 
 
-    const createRow = (r) => `
-        <tr>
-            <td>${r["รหัสครุภัณฑ์"] || ""}</td>
-            <td>${r["ชื่อครุภัณฑ์"] || ""}</td>
-            <td>${r["ที่เก็บ"] || ""}</td>
-            <td><span class="badge bg-secondary">${r["สถานะ"] || ""}</span></td>
-            <td>${r["รายละเอียดเพิ่มเติม"] || ""}</td>
-        </tr>`;
+        const createRow = (r) => `
+            <tr>
+                <td>${r["รหัสครุภัณฑ์"] || ""}</td>
+                <td>${r["ชื่อครุภัณฑ์"] || ""}</td>
+                <td>${r["ที่เก็บ"] || ""}</td>
+                <td><span class="badge bg-secondary">${r["สถานะ"] || ""}</span></td>
+                <td>${r["รายละเอียดเพิ่มเติม"] || ""}</td>
+            </tr>`;
 
-    const html = `
-        <div class="mb-3 text-end">
-            <button id="btn-preview" class="btn btn-info text-white">
-                <i class="bi bi-eye"></i> 👀 ตรวจสอบรายงานก่อนออกไฟล์
-            </button>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped align-middle">
-                <thead class="table-success">
-                    <tr>
-                        <th>รหัสครุภัณฑ์</th><th>ชื่อครุภัณฑ์</th><th>ที่เก็บ</th><th>สภาพ</th><th>หมายเหตุ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${data.length > 0 ? data.map(createRow).join("") : '<tr><td colspan="5" class="text-center">ไม่มีข้อมูล</td></tr>'}
-                </tbody>
-            </table>
-        </div>`;
-
-    pageContent.innerHTML = html;
-
-    // เมื่อคลิกปุ่ม Preview
-    document.getElementById("btn-preview").onclick = () => {
-        if (data.length === 0) return Swal.fire("ไม่พบข้อมูล", "กรุณาเพิ่มข้อมูลก่อนออกรายงาน", "warning");
-
-        // สร้างตารางจำลองสำหรับ Preview ใน SweetAlert
-        let previewTable = `
-            <div style="font-size: 0.8rem; text-align: left;">
-                <p><b>ตัวอย่างข้อมูลที่จะปรากฏในรายงาน (รวม ${data.length} รายการ)</b></p>
-                <table class="table table-sm table-bordered">
-                    <thead><tr class="table-light"><th>รหัส</th><th>รายการ</th><th>สภาพ</th></tr></thead>
+        const html = `
+            <div class="mb-3 text-end">
+                <button id="btn-preview" class="btn btn-info text-white shadow-sm">
+                    <i class="bi bi-eye"></i> ตรวจสอบและออกรายงาน
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped align-middle">
+                    <thead class="table-success">
+                        <tr>
+                            <th>รหัสครุภัณฑ์</th><th>ชื่อครุภัณฑ์</th><th>ที่เก็บ</th><th>สภาพ</th><th>หมายเหตุ</th>
+                        </tr>
+                    </thead>
                     <tbody>
-                        ${data.slice(0, 5).map(r => `<tr><td>${r["รหัสครุภัณฑ์"]}</td><td>${r["ชื่อครุภัณฑ์"]}</td><td>${r["สถานะ"]}</td></tr>`).join("")}
-                        ${data.length > 5 ? '<tr><td colspan="3" class="text-center">... และรายการอื่นๆ ...</td></tr>' : ''}
+                        ${data.length > 0 ? data.map(createRow).join("") : '<tr><td colspan="5" class="text-center">ไม่พบข้อมูลในชีท SHOW</td></tr>'}
                     </tbody>
                 </table>
-                <p class="mt-2 text-danger">* กรุณาเลือกรูปแบบไฟล์ที่ต้องการออกรายงาน</p>
             </div>`;
 
-        Swal.fire({
-            title: 'ยืนยันการออกรายงาน',
-            html: previewTable,
-            showCancelButton: true,
-            showDenyButton: true,
-            confirmButtonText: '📕 PDF',
-            denyButtonText: '📑 Google Doc',
-            cancelButtonText: 'ยกเลิก',
-            confirmButtonColor: '#dc3545', // สีแดงสำหรับ PDF
-            denyButtonColor: '#0d6efd',    // สีฟ้าสำหรับ Doc
-        }).then(async (result) => {
-            let format = "";
-            if (result.isConfirmed) format = "pdf";
-            else if (result.isDenied) format = "doc";
-            else return; // ยกเลิก
+        pageContent.innerHTML = html;
 
-            // เริ่มกระบวนการสร้างไฟล์
-            generateFile(format);
-        });
-    };
-}
+        document.getElementById("btn-preview").onclick = () => {
+            if (data.length === 0) return Swal.fire("ไม่พบข้อมูล", "ไม่มีรายการในชีท SHOW ที่จะออกรายงาน", "warning");
 
-// ฟังก์ชันสำหรับส่งคำสั่งไปที่ Apps Script
-async function generateFile(format) {
-    Swal.fire({ title: 'กำลังสร้างไฟล์...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    try {
-        const result = await postAction("SHOW", "generateReport", { format: format });
-        if (result.ok) {
             Swal.fire({
-                title: "สร้างสำเร็จ!",
-                html: `<a href="${result.fileURL}" target="_blank" class="btn btn-success w-100">คลิกเพื่อเปิดไฟล์ ${format.toUpperCase()}</a>`,
-                icon: "success"
-            });
-        }
-    } catch (e) { Swal.fire("ผิดพลาด!", e.message, "error"); }
-}
+                title: 'ยืนยันการสร้างรายงาน',
+                text: `พบข้อมูลทั้งหมด ${data.length} รายการ คุณต้องการไฟล์รูปแบบใด?`,
+                icon: 'question',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: '📕 เป็นไฟล์ PDF',
+                denyButtonText: '📑 เป็น Google Doc',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#dc3545',
+                denyButtonColor: '#0d6efd',
+            }).then(async (result) => {
+                let format = "";
+                if (result.isConfirmed) format = "pdf";
+                else if (result.isDenied) format = "doc";
+                else return;
 
+                // เรียกฟังก์ชันสร้างไฟล์
+                generateFile(format);
+            });
+        };
+    }
+
+    // ฟังก์ชันช่วยส่งคำสั่งสร้างไฟล์
+    async function generateFile(format) {
+        Swal.fire({ 
+            title: 'กำลังสร้างไฟล์...', 
+            html: 'กรุณารอสักครู่ ระบบกำลังสื่อสารกับ Google Drive',
+            allowOutsideClick: false, 
+            didOpen: () => Swal.showLoading() 
+        });
+
+        try {
+            // สำคัญ: ต้องส่ง action และ format ไปให้ GAS
+            const body = new FormData();
+            body.append("action", "generateReport");
+            body.append("format", format);
+
+            const response = await fetch(BASE_URL, { method: "POST", body: body });
+            const result = await response.json();
+
+            if (result.ok || result.status === "success") {
+                Swal.fire({
+                    title: "สำเร็จ!",
+                    html: `<div class="mb-3">สร้างไฟล์ ${format.toUpperCase()} เรียบร้อยแล้ว</div>
+                           <a href="${result.fileURL}" target="_blank" class="btn btn-success w-100">เปิดไฟล์รายงาน</a>`,
+                    icon: "success"
+                });
+            } else {
+                throw new Error(result.message || "GAS คืนค่าผิดพลาด");
+            }
+        } catch (e) {
+            console.error(e);
+            Swal.fire("เกิดข้อผิดพลาด!", "ไม่สามารถเชื่อมต่อกับ GAS ได้: " + e.message, "error");
+        }
+    }
 
     // --- 5.5 หน้า MANUAL ---
     function renderManualPage() {
