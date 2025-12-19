@@ -631,12 +631,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-    // --- 5.4 หน้า REPORT ---
+   // --- 5.4 หน้า REPORT ---
     async function renderReportPage() {
-        // ใช้ URLS.LOG เพื่อแสดง Log/Show ทั้งหมด
+        // ดึงข้อมูลจากชีท SHOW
         const data = await fetchJSON(URLS.SHOW); 
 
-        // ฟังก์ชันสร้าง Table Row
+        // ฟังก์ชันสร้าง Table Row (ลบ วันที่/เวลา ออกแล้ว)
         const createRow = (r) => `
             <tr>
                 <td>${r["รหัสครุภัณฑ์"] || ""}</td>
@@ -644,25 +644,27 @@ document.addEventListener("DOMContentLoaded", () => {
                 <td>${r["ที่เก็บ"] || ""}</td>
                 <td><span class="badge bg-secondary">${r["สถานะ"] || ""}</span></td>
                 <td>${r["รายละเอียดเพิ่มเติม"] || ""}</td>
-                <td>${r["วันที่"] || ""}</td> <td>${r["เวลา"] || ""}</td>
             </tr>`;
 
         const html = `
             <div class="mb-3 text-end">
-                <button id="export-report" class="btn btn-success">
-                    <i class="bi bi-file-earmark-excel"></i> ⬇️ Export Excel
+                <button id="export-report" class="btn btn-primary">
+                    <i class="bi bi-file-earmark-word"></i> 📑 ออกรายงานครุภัณฑ์ (Google Docs)
                 </button>
             </div>
             <div class="table-responsive">
             <table class="table table-bordered table-striped table-hover align-middle">
                 <thead class="table-success">
                     <tr>
-                        <th>รหัสครุภัณฑ์</th><th>ชื่อครุภัณฑ์</th><th>ที่เก็บ</th><th>สถานะ</th>
-                        <th>รายละเอียดเพิ่มเติม</th><th>วันที่</th><th>เวลา</th>
+                        <th>รหัสครุภัณฑ์</th>
+                        <th>ชื่อครุภัณฑ์</th>
+                        <th>ที่เก็บ</th>
+                        <th>สภาพ (สถานะ)</th>
+                        <th>หมายเหตุ</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${data.map(createRow).join("")}
+                    ${data.length > 0 ? data.map(createRow).join("") : '<tr><td colspan="5" class="text-center">ไม่มีข้อมูลรายงาน</td></tr>'}
                 </tbody>
             </table>
             </div>`;
@@ -670,29 +672,49 @@ document.addEventListener("DOMContentLoaded", () => {
         pageContent.innerHTML = html;
 
         // === Event Handler ===
-        // สร้างรายงาน (Export)
+        // ปุ่มออกรายงาน (สร้าง Google Docs)
         document.getElementById("export-report").onclick = async () => {
             const confirmResult = await Swal.fire({
-                title: "สร้างรายงาน?", text: "ระบบจะสร้างไฟล์ Excel", icon: "question",
-                showCancelButton: true, confirmButtonText: "สร้างเลย"
+                title: "สร้างรายงาน?",
+                text: "ระบบจะสร้างไฟล์รายงานในรูปแบบ Google Docs",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonText: "สร้างเลย",
+                cancelButtonText: "ยกเลิก",
+                confirmButtonColor: '#0d6efd'
             });
+
             if (!confirmResult.isConfirmed) return;
 
+            // แสดง Loading ขณะกำลังสร้างไฟล์
+            Swal.fire({
+                title: 'กำลังสร้างรายงาน...',
+                html: 'กรุณารอสักครู่ ระบบกำลังจัดทำไฟล์ Google Docs',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
             try {
-                // เรียกใช้ postAction สำหรับ generateReport
+                // เรียกใช้ action "generateReport" ผ่าน postAction
                 const result = await postAction("SHOW", "generateReport");
 
-                if (result && result.fileURL) {
+                if (result && (result.fileURL || result.ok)) {
                     await Swal.fire({
-                        title: "สำเร็จ!",
-                        html: `ดาวน์โหลดไฟล์: <a href="${result.fileURL}" target="_blank" class="btn btn-primary mt-2">คลิกที่นี่เพื่อดาวน์โหลด</a>`,
-                        icon: "success"
+                        title: "สร้างรายงานสำเร็จ!",
+                        text: "คุณสามารถเปิดดูหรือพิมพ์รายงานได้จากลิงก์ด้านล่าง",
+                        icon: "success",
+                        html: `
+                            <div class="mt-3">
+                                <a href="${result.fileURL}" target="_blank" class="btn btn-success w-100 mb-2">
+                                    <i class="bi bi-eye"></i> เปิดดูรายงานครุภัณฑ์
+                                </a>
+                            </div>`,
                     });
                 } else {
-                    await Swal.fire("ผิดพลาด!", "ไม่สามารถสร้างรายงานได้: ไม่มี URL ไฟล์", "error");
+                    throw new Error(result.message || "ไม่ได้รับ URL ของไฟล์");
                 }
             } catch (e) { 
-                await Swal.fire("ผิดพลาด!", e.message, "error"); 
+                await Swal.fire("เกิดข้อผิดพลาด!", e.message, "error"); 
             }
         };
     }
