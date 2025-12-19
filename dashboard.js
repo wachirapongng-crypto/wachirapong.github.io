@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================================
 
     // URL พื้นฐานสำหรับ Google Apps Script Web App
-    const BASE_URL = "https://script.google.com/macros/s/AKfycbzyOwWg00Fp9NgGg6AscrNb3uSNjHAp6d-E9Z3bjG-IalIXgm4wJpc3sFpmkY0iVlNv2w/exec";
+    const BASE_URL = "https://script.google.com/macros/s/AKfycbxFkX3gcJVDXlEhxyApW9kvSzHhC3L4FdTZcH-W2F5OlOEr8vj0PYDTVC1vnTOoxTnViQ/exec";
     
     // Object สำหรับเก็บ URL เต็มของแต่ละ Sheet เพื่อให้เข้าถึงได้ง่ายและอ่านง่าย
     const URLS = Object.freeze({
@@ -631,93 +631,94 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-   // --- 5.4 หน้า REPORT ---
-    async function renderReportPage() {
-        // ดึงข้อมูลจากชีท SHOW
-        const data = await fetchJSON(URLS.SHOW); 
+  // --- 5.4 หน้า REPORT (ฉบับมีระบบ Preview) ---
+async function renderReportPage() {
+    const data = await fetchJSON(URLS.SHOW); 
 
-        // ฟังก์ชันสร้าง Table Row (ลบ วันที่/เวลา ออกแล้ว)
-        const createRow = (r) => `
-            <tr>
-                <td>${r["รหัสครุภัณฑ์"] || ""}</td>
-                <td>${r["ชื่อครุภัณฑ์"] || ""}</td>
-                <td>${r["ที่เก็บ"] || ""}</td>
-                <td><span class="badge bg-secondary">${r["สถานะ"] || ""}</span></td>
-                <td>${r["รายละเอียดเพิ่มเติม"] || ""}</td>
-            </tr>`;
+    const createRow = (r) => `
+        <tr>
+            <td>${r["รหัสครุภัณฑ์"] || ""}</td>
+            <td>${r["ชื่อครุภัณฑ์"] || ""}</td>
+            <td>${r["ที่เก็บ"] || ""}</td>
+            <td><span class="badge bg-secondary">${r["สถานะ"] || ""}</span></td>
+            <td>${r["รายละเอียดเพิ่มเติม"] || ""}</td>
+        </tr>`;
 
-        const html = `
-            <div class="mb-3 text-end">
-                <button id="export-report" class="btn btn-primary">
-                    <i class="bi bi-file-earmark-word"></i> 📑 ออกรายงานครุภัณฑ์ (Google Docs)
-                </button>
-            </div>
-            <div class="table-responsive">
-            <table class="table table-bordered table-striped table-hover align-middle">
+    const html = `
+        <div class="mb-3 text-end">
+            <button id="btn-preview" class="btn btn-info text-white">
+                <i class="bi bi-eye"></i> 👀 ตรวจสอบรายงานก่อนออกไฟล์
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped align-middle">
                 <thead class="table-success">
                     <tr>
-                        <th>รหัสครุภัณฑ์</th>
-                        <th>ชื่อครุภัณฑ์</th>
-                        <th>ที่เก็บ</th>
-                        <th>สภาพ (สถานะ)</th>
-                        <th>หมายเหตุ</th>
+                        <th>รหัสครุภัณฑ์</th><th>ชื่อครุภัณฑ์</th><th>ที่เก็บ</th><th>สภาพ</th><th>หมายเหตุ</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${data.length > 0 ? data.map(createRow).join("") : '<tr><td colspan="5" class="text-center">ไม่มีข้อมูลรายงาน</td></tr>'}
+                    ${data.length > 0 ? data.map(createRow).join("") : '<tr><td colspan="5" class="text-center">ไม่มีข้อมูล</td></tr>'}
                 </tbody>
             </table>
+        </div>`;
+
+    pageContent.innerHTML = html;
+
+    // เมื่อคลิกปุ่ม Preview
+    document.getElementById("btn-preview").onclick = () => {
+        if (data.length === 0) return Swal.fire("ไม่พบข้อมูล", "กรุณาเพิ่มข้อมูลก่อนออกรายงาน", "warning");
+
+        // สร้างตารางจำลองสำหรับ Preview ใน SweetAlert
+        let previewTable = `
+            <div style="font-size: 0.8rem; text-align: left;">
+                <p><b>ตัวอย่างข้อมูลที่จะปรากฏในรายงาน (รวม ${data.length} รายการ)</b></p>
+                <table class="table table-sm table-bordered">
+                    <thead><tr class="table-light"><th>รหัส</th><th>รายการ</th><th>สภาพ</th></tr></thead>
+                    <tbody>
+                        ${data.slice(0, 5).map(r => `<tr><td>${r["รหัสครุภัณฑ์"]}</td><td>${r["ชื่อครุภัณฑ์"]}</td><td>${r["สถานะ"]}</td></tr>`).join("")}
+                        ${data.length > 5 ? '<tr><td colspan="3" class="text-center">... และรายการอื่นๆ ...</td></tr>' : ''}
+                    </tbody>
+                </table>
+                <p class="mt-2 text-danger">* กรุณาเลือกรูปแบบไฟล์ที่ต้องการออกรายงาน</p>
             </div>`;
 
-        pageContent.innerHTML = html;
+        Swal.fire({
+            title: 'ยืนยันการออกรายงาน',
+            html: previewTable,
+            showCancelButton: true,
+            showDenyButton: true,
+            confirmButtonText: '📕 PDF',
+            denyButtonText: '📑 Google Doc',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#dc3545', // สีแดงสำหรับ PDF
+            denyButtonColor: '#0d6efd',    // สีฟ้าสำหรับ Doc
+        }).then(async (result) => {
+            let format = "";
+            if (result.isConfirmed) format = "pdf";
+            else if (result.isDenied) format = "doc";
+            else return; // ยกเลิก
 
-        // === Event Handler ===
-        // ปุ่มออกรายงาน (สร้าง Google Docs)
-        document.getElementById("export-report").onclick = async () => {
-            const confirmResult = await Swal.fire({
-                title: "สร้างรายงาน?",
-                text: "ระบบจะสร้างไฟล์รายงานในรูปแบบ Google Docs",
-                icon: "question",
-                showCancelButton: true,
-                confirmButtonText: "สร้างเลย",
-                cancelButtonText: "ยกเลิก",
-                confirmButtonColor: '#0d6efd'
-            });
+            // เริ่มกระบวนการสร้างไฟล์
+            generateFile(format);
+        });
+    };
+}
 
-            if (!confirmResult.isConfirmed) return;
-
-            // แสดง Loading ขณะกำลังสร้างไฟล์
+// ฟังก์ชันสำหรับส่งคำสั่งไปที่ Apps Script
+async function generateFile(format) {
+    Swal.fire({ title: 'กำลังสร้างไฟล์...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+        const result = await postAction("SHOW", "generateReport", { format: format });
+        if (result.ok) {
             Swal.fire({
-                title: 'กำลังสร้างรายงาน...',
-                html: 'กรุณารอสักครู่ ระบบกำลังจัดทำไฟล์ Google Docs',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
+                title: "สร้างสำเร็จ!",
+                html: `<a href="${result.fileURL}" target="_blank" class="btn btn-success w-100">คลิกเพื่อเปิดไฟล์ ${format.toUpperCase()}</a>`,
+                icon: "success"
             });
-
-            try {
-                // เรียกใช้ action "generateReport" ผ่าน postAction
-                const result = await postAction("SHOW", "generateReport");
-
-                if (result && (result.fileURL || result.ok)) {
-                    await Swal.fire({
-                        title: "สร้างรายงานสำเร็จ!",
-                        text: "คุณสามารถเปิดดูหรือพิมพ์รายงานได้จากลิงก์ด้านล่าง",
-                        icon: "success",
-                        html: `
-                            <div class="mt-3">
-                                <a href="${result.fileURL}" target="_blank" class="btn btn-success w-100 mb-2">
-                                    <i class="bi bi-eye"></i> เปิดดูรายงานครุภัณฑ์
-                                </a>
-                            </div>`,
-                    });
-                } else {
-                    throw new Error(result.message || "ไม่ได้รับ URL ของไฟล์");
-                }
-            } catch (e) { 
-                await Swal.fire("เกิดข้อผิดพลาด!", e.message, "error"); 
-            }
-        };
-    }
+        }
+    } catch (e) { Swal.fire("ผิดพลาด!", e.message, "error"); }
+}
 
 
     // --- 5.5 หน้า MANUAL ---
