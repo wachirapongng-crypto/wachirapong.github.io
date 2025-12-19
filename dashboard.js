@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ============================================================
 
     // URL พื้นฐานสำหรับ Google Apps Script Web App
-    const BASE_URL = "https://script.google.com/macros/s/AKfycbxFkX3gcJVDXlEhxyApW9kvSzHhC3L4FdTZcH-W2F5OlOEr8vj0PYDTVC1vnTOoxTnViQ/exec";
+    const BASE_URL = "https://script.google.com/macros/s/AKfycbytUjsxc0zhTeD1qkb8DQOl7o7YzthDfSwAWXfroHqycY7IwZsEetpEoHKL_AC7R7HNVw/exec";
     
     // Object สำหรับเก็บ URL เต็มของแต่ละ Sheet เพื่อให้เข้าถึงได้ง่ายและอ่านง่าย
     const URLS = Object.freeze({
