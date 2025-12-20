@@ -1,7 +1,7 @@
 // ============================================================
 // 1. CONFIG & CONSTANTS
 // ============================================================
-const BASE_URL = "https://script.google.com/macros/s/AKfycbytUjsxc0zhTeD1qkb8DQOl7o7YzthDfSwAWXfroHqycY7IwZsEetpEoHKL_AC7R7HNVw/exec";
+const BASE_URL = "https://script.google.com/macros/s/AKfycbxweofgTSALf_znsnS88w1JM2eP32fOlyJD4z5lUsqivG_xnH21FFVrnVemVf_rMO9v8g/exec";
 const URLS = Object.freeze({
     DATA: BASE_URL + "?sheet=DATA",
     WAIT: BASE_URL + "?sheet=WAIT",
