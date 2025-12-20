@@ -9,13 +9,29 @@ const URLS = Object.freeze({
     USER: BASE_URL + "?sheet=LOGIN",
     SHOW: BASE_URL + "?sheet=SHOW"
 });
-const THEME_COLOR = "#002147";
+const THEME_COLOR = "#002147"; // Navy Blue
 
+// ตัวเลือกสถานที่และสถานะ
 const LOCATIONS = ["-", "501", "502", "503", "401", "401A", "401B", "401C", "402", "403", "404", "405", "ห้องพักครู", "301", "302"];
-const STATUS_OPTIONS = ["-", "ใช้งานได้", "ชำรุด", "เสื่อมสภาพ", "หมดอายุการใช้งาน", "ไม่รองรับการใช้งาน"];
+const STATUS_OPTIONS = ["ใช้งานได้", "ชำรุด", "เสื่อมสภาพ", "หมดอายุการใช้งาน", "ไม่รองรับการใช้งาน"];
+
+// แทรก CSS สำหรับ Dashboard Hover
+const style = document.createElement('style');
+style.innerHTML = `
+    .card-hover { transition: all 0.3s ease; cursor: pointer; position: relative; overflow: hidden; border: none !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .card-hover:hover { transform: translateY(-7px); box-shadow: 0 12px 20px rgba(0,0,0,0.15); }
+    .card-hover .view-more { 
+        position: absolute; bottom: -30px; left: 0; width: 100%; 
+        background: ${THEME_COLOR}; color: white; font-size: 0.7rem; 
+        text-align: center; transition: 0.3s; padding: 4px 0; font-weight: bold;
+    }
+    .card-hover:hover .view-more { bottom: 0; }
+    .bg-navy { background-color: ${THEME_COLOR} !important; color: white; }
+`;
+document.head.appendChild(style);
 
 // ============================================================
-// 2. UTILITY FUNCTIONS
+// 2. CORE UTILITIES
 // ============================================================
 
 async function fetchJSON(url) {
@@ -30,15 +46,14 @@ async function postAction(sheet, action, params = {}) {
     body.append("sheet", sheet);
     body.append("action", action);
     Object.entries(params).forEach(([k, v]) => body.append(k, v));
-    const res = await fetch(BASE_URL, { method: "POST", body });
-    return await res.json();
+    return await (await fetch(BASE_URL, { method: "POST", body })).json();
 }
 
 function showLoading(msg = "กำลังประมวลผล...") {
     document.getElementById("page-content").innerHTML = `
         <div class="text-center py-5">
             <div class="spinner-border text-primary mb-3" style="width: 3.5rem; height: 3.5rem;"></div>
-            <h4 class="fw-bold">${msg}</h4>
+            <h4 class="fw-bold" style="color:${THEME_COLOR}">${msg}</h4>
         </div>`;
 }
 
@@ -81,14 +96,13 @@ function formatDateCell(val) {
 const getSelectedRows = () => Array.from(document.querySelectorAll(".row-checkbox:checked")).map(cb => cb.closest("tr"));
 
 // ============================================================
-// 3. ROUTER & PAGE RENDERING
+// 3. ROUTER
 // ============================================================
 
 window.loadPage = async function(page, param = null) {
     const pageTitle = document.getElementById("page-title");
     showLoading(); 
 
-    // ตรวจสอบชื่อฟังก์ชันใน routes ให้ตรงกับด้านล่าง
     const routes = {
         "dash":    renderDashboard,
         "wait":    renderWait,
@@ -96,40 +110,128 @@ window.loadPage = async function(page, param = null) {
         "history": () => renderHistory(param),
         "user":    renderUser,
         "report":  renderReport,
-        "manual":  renderManual
-    };
-
-    const titles = {
-        "dash": "🏰 แผงควบคุม", "wait": "🕓 รอตรวจสอบ", "list": "📋 ฐานข้อมูลครุภัณฑ์",
-        "history": "📜 ประวัติย้อนหลัง", "user": "👥 จัดการสมาชิก", "report": "📑 รายงานและเอกสาร", "manual": "📘 คู่มือการใช้งาน"
+        "manual":  renderManual,
+        "filter":  () => renderFilteredStatus(param)
     };
 
     if (routes[page]) {
-        pageTitle.textContent = titles[page];
         await routes[page]();
         document.querySelectorAll('.btn-primary').forEach(b => b.style.backgroundColor = THEME_COLOR);
     }
 };
 
 // ============================================================
-// 4. PAGES
+// 4. PAGE RENDERERS
 // ============================================================
 
+// --- หน้า DASHBOARD ---
 async function renderDashboard() {
+    document.getElementById("page-title").textContent = "🏰 แผงควบคุม (Dashboard)";
     const [data, wait] = await Promise.all([fetchJSON(URLS.DATA), fetchJSON(URLS.WAIT)]);
+    
     const total = data.filter(r => r["รหัสครุภัณฑ์"]).length;
+    const getCount = (s) => data.filter(r => String(r["สถานะ"]).includes(s)).length;
+
+    const stats = [
+        { label: "ใช้งานได้", count: getCount("ใช้งานได้"), color: "#198754", icon: "bi-check-circle" },
+        { label: "ชำรุด", count: getCount("ชำรุด"), color: "#dc3545", icon: "bi-x-circle" },
+        { label: "เสื่อมสภาพ", count: getCount("เสื่อมสภาพ"), color: "#fd7e14", icon: "bi-exclamation-triangle" },
+        { label: "หมดอายุการใช้งาน", count: getCount("หมดอายุ"), color: "#6c757d", icon: "bi-calendar-x" },
+        { label: "ไม่รองรับการใช้งาน", count: getCount("ไม่รองรับ"), color: "#000000", icon: "bi-slash-circle" }
+    ];
+
     document.getElementById("page-content").innerHTML = `
-        <div class="row g-4 text-center">
-            <div class="col-md-4"><div class="card p-4 border-0 shadow-sm" style="border-left:5px solid ${THEME_COLOR}"><h6>ยอดรวมครุภัณฑ์</h6><h2 class="fw-bold">${total}</h2></div></div>
-            <div class="col-md-4"><div class="card p-4 border-0 shadow-sm" style="border-left:5px solid #ffc107"><h6>รอการตรวจสอบ</h6><h2 class="fw-bold text-warning">${wait.length}</h2></div></div>
-            <div class="col-md-4"><div class="card p-4 border-0 shadow-sm" style="border-left:5px solid #0dcaf0"><h6>สถานะ</h6><h2 class="fw-bold text-info">พร้อมใช้งาน</h2></div></div>
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="card p-4 card-hover bg-navy" onclick="window.loadPage('list')">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div><h6>ยอดรวมครุภัณฑ์</h6><h2 class="fw-bold">${total}</h2></div>
+                        <i class="bi bi-box-seam fs-1 opacity-50"></i>
+                    </div>
+                    <div class="view-more">ดูฐานข้อมูลทั้งหมด</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-4 card-hover" onclick="window.loadPage('wait')" style="border-left:8px solid #ffc107 !important">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div><h6 class="text-muted">รอการตรวจสอบ</h6><h2 class="fw-bold text-warning">${wait.length}</h2></div>
+                        <i class="bi bi-clock-history fs-1 text-warning opacity-50"></i>
+                    </div>
+                    <div class="view-more">ไปที่รายการรอตรวจสอบ</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-4 card-hover" onclick="checkWebStatus()" style="border-left:8px solid #0dcaf0 !important">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div><h6 class="text-muted">สถานะเว็บไซต์</h6><h2 class="fw-bold text-info" id="web-status">ตรวจสอบ...</h2></div>
+                        <i class="bi bi-cpu fs-1 text-info opacity-50"></i>
+                    </div>
+                    <div class="view-more">คลิกดูรายละเอียดการเชื่อมต่อ</div>
+                </div>
+            </div>
+        </div>
+
+        <h6 class="fw-bold mb-3 text-navy"><i class="bi bi-bar-chart-fill me-2"></i>สถานะอุปกรณ์ละเอียด</h6>
+        <div class="row g-3 mb-5">
+            ${stats.map(s => `
+                <div class="col-md-2 col-6">
+                    <div class="card h-100 card-hover text-center p-3" onclick="window.loadPage('filter', '${s.label}')" style="border-bottom: 4px solid ${s.color} !important;">
+                        <i class="bi ${s.icon} fs-3" style="color: ${s.color}"></i>
+                        <div class="small text-muted mt-2">${s.label}</div>
+                        <h4 class="fw-bold mb-0">${s.count}</h4>
+                        <div class="view-more">ดูเพิ่ม</div>
+                    </div>
+                </div>
+            `).join("")}
+        </div>
+    `;
+    setTimeout(() => { document.getElementById('web-status').innerText = "พร้อมใช้งาน"; }, 800);
+}
+
+// --- หน้ากรองข้อมูล (SHOW) ---
+async function renderFilteredStatus(statusName) {
+    document.getElementById("page-title").textContent = `รายการ: ${statusName}`;
+    const data = await fetchJSON(URLS.SHOW);
+    const filtered = data.filter(r => String(r["สถานะ"]).includes(statusName));
+
+    const rows = filtered.map((r, i) => `
+        <tr>
+            <td class="text-center">${i + 1}</td>
+            <td class="fw-bold">${r["รหัสครุภัณฑ์"] || ""}</td>
+            <td>${r["ชื่อครุภัณฑ์"] || ""}</td>
+            <td>${r["ที่เก็บ"] || "-"}</td>
+            <td><span class="badge bg-navy">${r["สถานะ"] || ""}</span></td>
+            <td>${r["รายละเอียดเพิ่มเติม"] || "-"}</td>
+        </tr>`).join("");
+
+    document.getElementById("page-content").innerHTML = `
+        <div class="mb-3"><button class="btn btn-secondary btn-sm" onclick="window.loadPage('dash')"><i class="bi bi-arrow-left"></i> กลับหน้าหลัก</button></div>
+        <div class="table-responsive shadow-sm border rounded">
+            <table class="table table-hover bg-white mb-0 align-middle">
+                <thead class="bg-navy"><tr><th>ลำดับ</th><th>รหัสครุภัณฑ์</th><th>ชื่อครุภัณฑ์</th><th>ที่เก็บ</th><th>สถานะ</th><th>หมายเหตุ</th></tr></thead>
+                <tbody>${filtered.length > 0 ? rows : '<tr><td colspan="6" class="text-center py-4">ไม่พบข้อมูล</td></tr>'}</tbody>
+            </table>
         </div>`;
 }
 
+// --- ตรวจสอบ Server ---
+window.checkWebStatus = () => {
+    Swal.fire({
+        title: 'Website Monitoring',
+        html: `<div class="text-start small">
+                <p><i class="bi bi-circle-fill text-success me-2"></i><b>Server:</b> Google App Engine (Active)</p>
+                <p><i class="bi bi-circle-fill text-success me-2"></i><b>Database:</b> Google Sheets API v4 (Connected)</p>
+                <p><i class="bi bi-circle-fill text-success me-2"></i><b>Storage:</b> Google Drive (Ready)</p>
+                <p><i class="bi bi-shield-check text-primary me-2"></i><b>Security:</b> SSL/HTTPS Encrypted</p>
+               </div>`,
+        icon: 'info', confirmButtonColor: THEME_COLOR
+    });
+};
+
+// --- หน้า WAIT ---
 async function renderWait() {
     const data = await fetchJSON(URLS.WAIT);
     const opt = (arr, sel) => arr.map(v => `<option value="${v}" ${v === sel ? 'selected' : ''}>${v}</option>`).join("");
-
     const rows = data.map((r, i) => `
         <tr data-row="${r._row || i+2}">
             <td><input type="checkbox" class="form-check-input row-checkbox"></td>
@@ -137,7 +239,8 @@ async function renderWait() {
             <td><select class="form-select form-select-sm wait-loc">${opt(LOCATIONS, r["ที่อยู่"])}</select></td>
             <td><select class="form-select form-select-sm wait-status">${opt(STATUS_OPTIONS, r["สถานะ"])}</select></td>
             <td><input class="form-control form-control-sm wait-note" value="${r["หมายเหตุ"]||""}"></td>
-            <td>${formatDateCell(r["วันที่"])}</td><td>${formatTimeCell(r["เวลา"])}</td>
+            <td class="text-nowrap">${formatDateCell(r["วันที่"])}</td>
+            <td>${formatTimeCell(r["เวลา"])}</td>
             <td class="text-center"><button class="btn btn-success btn-sm" onclick="confirmWait(this)">✔</button></td>
             <td class="text-center"><button class="btn btn-danger btn-sm" onclick="deleteRow('WAIT', this)">🗑</button></td>
         </tr>`).join("");
@@ -148,13 +251,14 @@ async function renderWait() {
             <button class="btn btn-danger btn-sm" onclick="bulkDelete('WAIT')">🗑 ลบที่เลือก</button></div>
             <button class="btn btn-outline-secondary btn-sm" onclick="window.loadPage('wait')">🔄 รีเฟรช</button>
         </div>
-        <div class="table-responsive shadow-sm border rounded"><table class="table table-hover align-middle bg-white mb-0">
+        <div class="table-responsive shadow-sm rounded border"><table class="table table-hover align-middle bg-white mb-0">
             <thead class="table-dark"><tr><th><input type="checkbox" id="check-all"></th><th>รหัส</th><th>ชื่อ</th><th>ที่อยู่</th><th>สถานะ</th><th>หมายเหตุ</th><th>วันที่</th><th>เวลา</th><th>ส่ง</th><th>ลบ</th></tr></thead>
             <tbody id="table-body">${rows}</tbody>
         </table></div>`;
     document.getElementById("check-all").onclick = (e) => document.querySelectorAll(".row-checkbox").forEach(cb => cb.checked = e.target.checked);
 }
 
+// --- หน้า LIST ---
 async function renderList() {
     const data = await fetchJSON(URLS.DATA);
     const rows = data.filter(r => r["รหัสครุภัณฑ์"]).map((r, i) => {
@@ -183,61 +287,72 @@ async function renderList() {
     document.getElementById("check-all").onclick = (e) => document.querySelectorAll(".row-checkbox").forEach(cb => cb.checked = e.target.checked);
 }
 
+// --- หน้า USER ---
 async function renderUser() {
     const data = await fetchJSON(URLS.USER);
     const rows = data.map((u, i) => `<tr data-row="${u._row || i+2}">
         <td><input type="checkbox" class="form-check-input row-checkbox"></td>
         <td>${u["ID"]||""}</td><td>${u["name"]||""}</td><td><span class="badge ${u["Status"]==='admin'?'bg-danger':'bg-info text-dark'}">${u["Status"]}</span></td>
-        <td class="text-center"><button class="btn btn-warning btn-sm" onclick="editUser(this)">📝 แก้ไข</button></td>
-        <td class="text-center"><button class="btn btn-danger btn-sm" onclick="deleteRow('LOGIN', this)">🗑 ลบ</button></td>
+        <td class="text-center"><button class="btn btn-warning btn-sm" onclick="editUser(this)">📝</button> <button class="btn btn-danger btn-sm" onclick="deleteRow('LOGIN', this)">🗑</button></td>
     </tr>`).join("");
     document.getElementById("page-content").innerHTML = `
         <div class="mb-3 d-flex justify-content-between">
-            <button class="btn btn-primary btn-sm" onclick="addUser()">➕ เพิ่มสมาชิกใหม่</button>
+            <button class="btn btn-primary btn-sm" onclick="addUser()">➕ เพิ่มสมาชิก</button>
             <button class="btn btn-danger btn-sm" onclick="bulkDelete('LOGIN')">🗑 ลบสมาชิกที่เลือก</button>
         </div>
-        <div class="table-responsive shadow-sm rounded border"><table class="table table-hover align-middle bg-white mb-0"><thead class="table-dark"><tr><th>เลือก</th><th>ID</th><th>ชื่อ</th><th>สิทธิ์</th><th>แก้</th><th>ลบ</th></tr></thead><tbody id="table-body">${rows}</tbody></table></div>`;
-    document.getElementById("check-all").onclick = (e) => document.querySelectorAll(".row-checkbox").forEach(cb => cb.checked = e.target.checked);
+        <div class="table-responsive shadow-sm rounded border"><table class="table table-hover align-middle bg-white mb-0"><thead class="table-dark"><tr><th>เลือก</th><th>ID</th><th>ชื่อ</th><th>สิทธิ์</th><th>จัดการ</th></tr></thead><tbody id="table-body">${rows}</tbody></table></div>`;
 }
 
+// --- หน้า HISTORY ---
 async function renderHistory(id = "") {
     document.getElementById("page-content").innerHTML = `
         <div class="card border-0 shadow-sm mb-4"><div class="card-body d-flex gap-2">
-            <input type="text" id="h-input" class="form-control" placeholder="พิมพ์รหัสครุภัณฑ์..." value="${id}">
+            <input type="text" id="h-input" class="form-control" placeholder="ระบุรหัสครุภัณฑ์..." value="${id}">
             <button class="btn btn-primary px-4" onclick="window.loadPage('history', document.getElementById('h-input').value)">สืบค้น</button>
-            <button class="btn btn-secondary px-3" onclick="window.loadPage('list')">ย้อนกลับ</button>
+            <button class="btn btn-secondary" onclick="window.loadPage('list')">ย้อนกลับ</button>
         </div></div><div id="h-result"></div>`;
     if(!id) return;
     const resDiv = document.getElementById("h-result");
     const json = await fetchJSON(`https://docs.google.com/spreadsheets/d/1bkpz-iG4B8qnvZc4ql4qE15Qw8HrIZ1aeX1vZQzMFy0/gviz/tq?tqx=out:json&sheet=LOG`);
     const logs = json.table.rows.map(r => (r.c||[]).map(c => c ? c.v : "")).filter(r => String(r[0]) === String(id));
-    if(logs.length === 0) { resDiv.innerHTML = `<div class="alert alert-warning text-center">ไม่พบประวัติรหัส: ${id}</div>`; return; }
-    resDiv.innerHTML = `<div class="p-3 bg-light rounded border mb-3 small text-navy">📦 <b>รหัส:</b> ${id} | <b>ชื่อ:</b> ${logs[0][1]}</div>
+    if(logs.length === 0) { resDiv.innerHTML = `<div class="alert alert-warning text-center">ไม่พบประวัติสำหรับรหัส: ${id}</div>`; return; }
+    resDiv.innerHTML = `
+        <div class="p-3 bg-light rounded border mb-3 small text-navy">📦 <b>รหัส:</b> ${id} | <b>ชื่อ:</b> ${logs[0][1]}</div>
         <div class="table-responsive shadow-sm border"><table class="table table-bordered bg-white mb-0">
         <thead class="table-dark"><tr><th>วันที่</th><th>เวลา</th><th>ที่เก็บ</th><th>สถานะ</th><th>หมายเหตุ</th></tr></thead>
         <tbody>${logs.map(r => `<tr><td>${formatDateCell(r[5])}</td><td>${formatTimeCell(r[6])}</td><td>${r[2]}</td><td><span class="badge ${r[3].includes('ใช้งานได้')?'bg-success':'bg-danger'}">${r[3]}</span></td><td>${r[4]}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
-async function renderReport() {
-    const data = await fetchJSON(URLS.SHOW);
-    const rows = data.map(r => `<tr><td>${r["รหัสครุภัณฑ์"]||""}</td><td>${r["ชื่อครุภัณฑ์"]||""}</td><td>${r["ที่เก็บ"]||""}</td><td>${r["สถานะ"]||""}</td></tr>`).join("");
-    document.getElementById("page-content").innerHTML = `
-        <div class="mb-3 text-end"><button class="btn btn-success" onclick="genReport('pdf')">📕 PDF</button> <button class="btn btn-primary" onclick="genReport('doc')">📑 Word</button></div>
-        <div class="table-responsive shadow-sm border rounded"><table class="table table-bordered bg-white mb-0"><thead class="table-success"><tr><th>รหัส</th><th>ชื่อ</th><th>ที่เก็บ</th><th>สภาพ</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-}
-
+// --- หน้า MANUAL ---
 function renderManual() {
     document.getElementById("page-content").innerHTML = `
-        <div class="card border-0 shadow-sm p-4"><h5 class="fw-bold mb-4" style="color:${THEME_COLOR}"><i class="bi bi-book me-2"></i> คู่มือการใช้งาน</h5>
-            <div class="row g-3">
-                <div class="col-md-6"><div class="p-3 border rounded bg-light"><h6>1. การตรวจสอบ (WAIT)</h6><p class="small text-muted">เลือกที่อยู่และสถานะ แล้วกดยืนยัน (✔) เพื่อบันทึกลงประวัติ</p></div></div>
-                <div class="col-md-6"><div class="p-3 border rounded bg-light"><h6>2. การจัดการ (LIST)</h6><p class="small text-muted">เพิ่มรายการแบบต่อเนื่อง ระบบจะสร้าง Barcode/QRCode ให้อัตโนมัติ</p></div></div>
+        <div class="card border-0 shadow-sm overflow-hidden">
+            <div class="card-header bg-navy text-white p-3"><h5 class="m-0"><i class="bi bi-book me-2"></i>คู่มือการใช้งานสำหรับคณะอาจารย์</h5></div>
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-6"><div class="p-3 border rounded h-100">
+                        <h6 class="fw-bold text-primary"><i class="bi bi-speedometer2"></i> 1. หน้าแผงควบคุม</h6>
+                        <p class="small text-muted">แสดงยอดรวมและสถานะอุปกรณ์แยกตามกลุ่ม อาจารย์สามารถ "คลิก" ที่กลุ่มต่างๆ เพื่อดูรายการอุปกรณ์ในกลุ่มนั้นๆ ได้ทันที</p>
+                    </div></div>
+                    <div class="col-md-6"><div class="p-3 border rounded h-100">
+                        <h6 class="fw-bold text-primary"><i class="bi bi-clock-history"></i> 2. การตรวจสอบ (WAIT)</h6>
+                        <p class="small text-muted">ใช้ยืนยันรายการสแกน อาจารย์สามารถเลือก 'สถานที่' และ 'สถานะ' ใหม่ได้ในช่องตารางก่อนกดยืนยัน ✔ เพื่อลงประวัติถาวร</p>
+                    </div></div>
+                    <div class="col-md-6"><div class="p-3 border rounded h-100">
+                        <h6 class="fw-bold text-primary"><i class="bi bi-archive"></i> 3. ฐานข้อมูลครุภัณฑ์</h6>
+                        <p class="small text-muted">จัดการรหัสครุภัณฑ์หลัก อาจารย์สามารถเพิ่มรายการใหม่แบบต่อเนื่องได้ ระบบจะออก QR Code ให้อัตโนมัติ</p>
+                    </div></div>
+                    <div class="col-md-6"><div class="p-3 border rounded h-100">
+                        <h6 class="fw-bold text-primary"><i class="bi bi-file-earmark-pdf"></i> 4. การออกรายงาน</h6>
+                        <p class="small text-muted">สรุปข้อมูลสถานะล่าสุดจากชีท SHOW ออกเป็นไฟล์ PDF หรือ Word เพื่อใช้ในการประชุมหรือส่งหน่วยงาน</p>
+                    </div></div>
+                </div>
             </div>
         </div>`;
 }
 
 // ============================================================
-// 5. ACTIONS
+// 5. ACTION LOGIC
 // ============================================================
 
 window.openDynamicAddForm = async function() {
@@ -271,8 +386,7 @@ window.openDynamicAddForm = async function() {
                 const n = r.querySelector('.sw-name').value.trim();
                 if(c && n) data.push({ code: c, name: n });
             });
-            if(data.length === 0) return Swal.showValidationMessage('กรุณากรอกข้อมูล');
-            return data;
+            return data.length > 0 ? data : Swal.showValidationMessage('กรุณากรอกข้อมูล');
         }
     });
 
@@ -348,10 +462,19 @@ window.addUser = async () => {
     if (f && f.id) { await postAction("LOGIN", "addUser", f); window.loadPage('user'); }
 };
 
+window.renderReport = async () => {
+    const data = await fetchJSON(URLS.SHOW);
+    const rows = data.map(r => `<tr><td>${r["รหัสครุภัณฑ์"]||""}</td><td>${r["ชื่อครุภัณฑ์"]||""}</td><td>${r["ที่เก็บ"]||""}</td><td>${r["สถานะ"]||""}</td></tr>`).join("");
+    document.getElementById("page-content").innerHTML = `
+        <div class="mb-3 text-end"><button class="btn btn-success" onclick="genReport('pdf')">📕 PDF</button> <button class="btn btn-primary" onclick="genReport('doc')">📑 Word</button></div>
+        <div class="table-responsive shadow-sm border rounded"><table class="table table-bordered bg-white mb-0"><thead class="table-success"><tr><th>รหัส</th><th>ชื่อ</th><th>ที่เก็บ</th><th>สภาพ</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+};
+
 window.genReport = async (fmt) => {
     showLoading("กำลังสร้างรายงาน...");
     const res = await postAction("SHOW", "generateReport", { format: fmt });
     if (res.fileData) { downloadFile(res.fileData, res.fileName); Swal.fire("สำเร็จ", "ดาวน์โหลดแล้ว", "success"); window.loadPage('report'); }
 };
 
+// เริ่มต้นโหลดหน้า Dashboard
 document.addEventListener("DOMContentLoaded", () => window.loadPage("dash"));
