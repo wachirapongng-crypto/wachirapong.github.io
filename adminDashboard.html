@@ -3,74 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>ระบบจัดการครุภัณฑ์ | Academic Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
-        /* ปรับแต่งเพิ่มเติมเล็กน้อยเพื่อให้ดูสบายตา */
-        body { background-color: #f8f9fa; }
-        .sidebar-link { cursor: pointer; }
-        .sidebar-link:hover { background-color: #e9ecef; }
+        :root {
+            --navy-primary: #002147; /* สีน้ำเงินกรมท่าสไตล์วิชาการ */
+            --navy-hover: #003366;
+        }
+
+        body { 
+            background-color: #f4f6f9; 
+            font-family: 'Sarabun', sans-serif; /* ฟอนต์ทางการ */
+        }
+
+        /* Navbar Custom */
+        .navbar-navy { 
+            background-color: var(--navy-primary) !important; 
+        }
+
+        /* Sidebar Custom */
+        .offcanvas { width: 280px !important; }
+        .list-group-item {
+            border: none;
+            padding: 1rem 1.5rem;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .list-group-item:hover {
+            background-color: #f0f2f5;
+            color: var(--navy-primary);
+            padding-left: 2rem;
+        }
+        .list-group-item.active-menu {
+            background-color: var(--navy-primary);
+            color: white !important;
+        }
+
+        /* Card Custom */
+        .card-main {
+            min-height: 80vh;
+            border-radius: 12px;
+        }
+
+        /* ปุ่มหลักประจำหน้า */
+        .btn-primary {
+            background-color: var(--navy-primary);
+            border-color: var(--navy-primary);
+        }
+        .btn-primary:hover {
+            background-color: var(--navy-hover);
+        }
     </style>
 </head>
 
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-navy shadow-sm sticky-top">
         <div class="container-fluid">
-            <button class="btn btn-primary me-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
+            <button class="btn btn-outline-light me-3 border-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu">
                 <i class="bi bi-list fs-4"></i>
             </button>
             
-            <a class="navbar-brand fw-bold" href="#">ระบบจัดการครุภัณฑ์</a>
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="#">
+                <i class="bi bi-shield-check me-2"></i> ระบบจัดการครุภัณฑ์
+            </a>
 
             <div class="d-flex align-items-center ms-auto text-white">
-                <div class="me-3">
-                    <i class="bi bi-person-circle"></i> 
-                    <span id="username">Admin</span>
+                <div class="me-3 d-none d-sm-inline">
+                    <small class="text-light opacity-75">เข้าใช้งานโดย:</small> 
+                    <span id="username" class="fw-bold text-uppercase">Admin</span>
                 </div>
-                <button id="logout-btn" class="btn btn-sm btn-danger">
-                    <i class="bi bi-box-arrow-right"></i> ออกจากระบบ
+                <button id="logout-btn" class="btn btn-outline-light btn-sm px-3 rounded-pill">
+                    <i class="bi bi-box-arrow-right me-1"></i> ออกจากระบบ
                 </button>
             </div>
         </div>
     </nav>
 
     <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu">
-        <div class="offcanvas-header bg-light">
-            <h5 class="offcanvas-title fw-bold text-primary">เมนูหลัก</h5>
+        <div class="offcanvas-header border-bottom">
+            <div>
+                <h5 class="offcanvas-title fw-bold" style="color: var(--navy-primary);">เมนูจัดการ</h5>
+                <small class="text-muted">Academic Management</small>
+            </div>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body p-0">
-            <div class="list-group list-group-flush">
-                <button onclick="loadPage('wait')" class="list-group-item list-group-item-action sidebar-link border-0 py-3" data-bs-dismiss="offcanvas">
-                    <i class="bi bi-clock-history me-2 text-warning"></i> ครุภัณฑ์ที่รอตรวจสอบ
+            <div class="list-group list-group-flush mt-2">
+                <button onclick="loadPage('dash')" class="list-group-item list-group-item-action" data-bs-dismiss="offcanvas">
+                    <i class="bi bi-speedometer2 me-2"></i> แผงควบคุม (Dashboard)
                 </button>
-                <button onclick="loadPage('report')" class="list-group-item list-group-item-action sidebar-link border-0 py-3" data-bs-dismiss="offcanvas">
-                    <i class="bi bi-bar-chart-line me-2 text-success"></i> ออกรายงานครุภัณฑ์
+                <button onclick="loadPage('wait')" class="list-group-item list-group-item-action" data-bs-dismiss="offcanvas">
+                    <i class="bi bi-clock-history me-2"></i> ครุภัณฑ์ที่รอตรวจสอบ
                 </button>
-                <button onclick="loadPage('list')" class="list-group-item list-group-item-action sidebar-link border-0 py-3" data-bs-dismiss="offcanvas">
-                    <i class="bi bi-list-check me-2 text-primary"></i> รายการครุภัณฑ์ทั้งหมด
+                <button onclick="loadPage('list')" class="list-group-item list-group-item-action" data-bs-dismiss="offcanvas">
+                    <i class="bi bi-archive me-2"></i> ฐานข้อมูลครุภัณฑ์
                 </button>
-                <button onclick="loadPage('manual')" class="list-group-item list-group-item-action sidebar-link border-0 py-3" data-bs-dismiss="offcanvas">
-                    <i class="bi bi-book me-2 text-info"></i> คู่มือการใช้งาน
+                <button onclick="loadPage('history')" class="list-group-item list-group-item-action" data-bs-dismiss="offcanvas">
+                    <i class="bi bi-search me-2"></i> สืบค้นประวัติย้อนหลัง
                 </button>
-                <button onclick="loadPage('user')" class="list-group-item list-group-item-action sidebar-link border-0 py-3" data-bs-dismiss="offcanvas">
-                    <i class="bi bi-people me-2 text-secondary"></i> จัดการสมาชิก
+                <button onclick="loadPage('report')" class="list-group-item list-group-item-action" data-bs-dismiss="offcanvas">
+                    <i class="bi bi-file-earmark-pdf me-2"></i> ออกรายงานเอกสาร
+                </button>
+                <button onclick="loadPage('user')" class="list-group-item list-group-item-action border-top" data-bs-dismiss="offcanvas">
+                    <i class="bi bi-people me-2"></i> จัดการสมาชิก
+                </button>
+                <button onclick="loadPage('manual')" class="list-group-item list-group-item-action" data-bs-dismiss="offcanvas">
+                    <i class="bi bi-book me-2"></i> คู่มือการใช้งาน
                 </button>
             </div>
         </div>
+        <div class="p-3 border-top text-center">
+            <small class="text-muted text-uppercase">V 3.0 Academic Edition</small>
+        </div>
     </div>
 
-    <div class="container mt-4">
-        <div class="card shadow-sm border-0">
+    <div class="container my-4">
+        <div class="card card-main shadow-sm border-0">
             <div class="card-body p-4">
                 <main class="content" id="main">
-                    <h2 id="page-title" class="mb-3 border-bottom pb-2">ยินดีต้อนรับ</h2>
-                    <div id="page-content" class="text-muted">
-                        กรุณาเลือกเมนูจากด้านซ้ายเพื่อเริ่มใช้งาน
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+                        <h3 id="page-title" class="m-0 fw-bold" style="color: var(--navy-primary);">ยินดีต้อนรับ</h3>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb m-0">
+                                <li class="breadcrumb-item"><a href="#" onclick="loadPage('dash')">หน้าแรก</a></li>
+                                <li id="breadcrumb-active" class="breadcrumb-item active" aria-current="page">Dashboard</li>
+                            </ol>
+                        </nav>
+                    </div>
+                    
+                    <div id="page-content">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status"></div>
+                            <p class="text-muted">กำลังเตรียมข้อมูลสำหรับท่าน...</p>
+                        </div>
                     </div>
                 </main>
             </div>
