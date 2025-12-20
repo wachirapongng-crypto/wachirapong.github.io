@@ -4,16 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจัดการครุภัณฑ์ | Academic Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root { --navy: #002147; --light-gray: #f8f9fa; }
-        body { background-color: #f4f6f9; font-family: 'Sarabun', sans-serif; }
+        body { 
+            background-color: #f4f6f9; 
+            font-family: 'Sarabun', sans-serif; /* ใช้ฟอนต์ Sarabun */
+        }
         .navbar-navy { background-color: var(--navy) !important; }
-        .sidebar-link { cursor: pointer; border: none; transition: 0.2s; }
-        .sidebar-link:hover { background-color: #e9ecef; padding-left: 2rem; }
+        .sidebar-link { cursor: pointer; border: none; transition: 0.2s; font-weight: 500; }
+        .sidebar-link:hover { background-color: #e9ecef; padding-left: 2rem; color: var(--navy); }
         .card-main { min-height: 85vh; border-radius: 15px; }
+        /* ปรับแต่ง Table Header ให้ดูเป็นทางการ */
         .table thead { background-color: var(--navy); color: white; }
     </style>
 </head>
@@ -26,15 +31,15 @@
             </button>
             <a class="navbar-brand fw-bold" href="#" onclick="loadPage('dash')">ระบบจัดการครุภัณฑ์</a>
             <div class="ms-auto d-flex align-items-center text-white">
-                <span id="username" class="me-3 d-none d-sm-block">ยินดีต้อนรับ, Admin</span>
-                <button onclick="location.reload()" class="btn btn-sm btn-outline-light rounded-pill">ออกจากระบบ</button>
+                <span id="username" class="me-3 d-none d-sm-block"><i class="bi bi-person-circle"></i> ยินดีต้อนรับ, Admin</span>
+                <button onclick="location.reload()" class="btn btn-sm btn-outline-light rounded-pill px-3">ออกจากระบบ</button>
             </div>
         </div>
     </nav>
 
     <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarMenu">
-        <div class="offcanvas-header border-bottom">
-            <h5 class="offcanvas-title fw-bold" style="color: var(--navy);">เมนูจัดการ</h5>
+        <div class="offcanvas-header border-bottom bg-light">
+            <h5 class="offcanvas-title fw-bold" style="color: var(--navy);">เมนูจัดการระบบ</h5>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
         <div class="offcanvas-body p-0">
@@ -45,6 +50,7 @@
                 <button onclick="loadPage('history')" class="list-group-item list-group-item-action sidebar-link py-3" data-bs-dismiss="offcanvas"><i class="bi bi-search me-2 text-secondary"></i> สืบค้นประวัติย้อนหลัง</button>
                 <button onclick="loadPage('report')" class="list-group-item list-group-item-action sidebar-link py-3" data-bs-dismiss="offcanvas"><i class="bi bi-file-earmark-pdf me-2 text-success"></i> ออกรายงานเอกสาร</button>
                 <button onclick="loadPage('user')" class="list-group-item list-group-item-action sidebar-link py-3 border-top" data-bs-dismiss="offcanvas"><i class="bi bi-people me-2 text-dark"></i> จัดการสมาชิก</button>
+                <button onclick="loadPage('manual')" class="list-group-item list-group-item-action sidebar-link py-3" data-bs-dismiss="offcanvas"><i class="bi bi-book me-2 text-muted"></i> คู่มือการใช้งาน</button>
             </div>
         </div>
     </div>
@@ -52,10 +58,14 @@
     <div class="container my-4">
         <div class="card card-main shadow-sm border-0">
             <div class="card-body p-4">
-                <h3 id="page-title" class="fw-bold mb-4" style="color: var(--navy);">หน้าแรก</h3>
-                <hr>
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+                    <h3 id="page-title" class="fw-bold m-0" style="color: var(--navy);">หน้าแรก</h3>
+                </div>
                 <div id="page-content">
-                    <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary mb-3"></div>
+                        <p class="text-muted">กำลังดึงข้อมูลจากระบบ...</p>
+                    </div>
                 </div>
             </div>
         </div>
